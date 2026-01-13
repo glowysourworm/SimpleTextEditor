@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="SimpleTextEditor/SimpleTextEditor.csproj" />
+  <Project Path="SimpleTextEditor.Sample/SimpleTextEditor.Sample.csproj" Id="735d19b0-f84d-43e0-a904-66ece177ace1" />
+  <Project Path="SimpleTextEditor/SimpleTextEditor.csproj" Id="cad1724e-2280-4c97-981c-ec4cac79c619" />
 </Solution>

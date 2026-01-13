@@ -1,14 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
-    <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SimpleWpf" Version="0.0.1" />
+    <ProjectReference Include="..\SimpleTextEditor\SimpleTextEditor.csproj" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@
 using System.Data;
 using System.Windows;
 
-namespace SimpleTextEditor
+namespace SimpleTextEditor.Sample
 {
     /// <summary>
     /// Interaction logic for App.xaml
