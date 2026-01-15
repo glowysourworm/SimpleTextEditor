@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
-namespace SimpleTextEditor.Controls
+namespace SimpleTextEditor.Text
 {
     public class SimpleTextRunProperties : TextRunProperties
     {

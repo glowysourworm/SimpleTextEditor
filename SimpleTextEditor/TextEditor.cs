@@ -4,7 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
-using SimpleTextEditor.Controls;
+using SimpleTextEditor.Text;
 
 namespace SimpleTextEditor
 {

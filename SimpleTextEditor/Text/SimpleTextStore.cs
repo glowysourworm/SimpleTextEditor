@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Windows.Media.TextFormatting;
 
-namespace SimpleTextEditor.Controls
+namespace SimpleTextEditor.Text
 {
     // (MSFT Github, CustomTextSource)
     //

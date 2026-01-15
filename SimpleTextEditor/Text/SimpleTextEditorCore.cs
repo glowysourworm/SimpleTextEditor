@@ -6,7 +6,7 @@ using System.Windows.Media.TextFormatting;
 
 using SimpleWpf.Extensions;
 
-namespace SimpleTextEditor.Controls
+namespace SimpleTextEditor.Text
 {
     public class SimpleTextEditorCore
     {

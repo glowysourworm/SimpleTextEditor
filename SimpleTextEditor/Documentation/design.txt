@@ -1,0 +1,40 @@
+Simple Text Editor
+------------------
+
+Design Goals:
+
+	- WPF based control
+	- Reasonable performance for large documents (requires virtual rendering, and tree-based text store)
+	- User specified segmentation of documents (highlighted text, designated read-only sections)
+	- Text folding based on segment tokens
+	- Syntax Highlighting
+	- Text Completion
+	- Memory Considerations
+	- Line Numbers
+	- Customizable Margin: Debug markers, or other UI markers that are customizable
+
+Microsoft TextFormatting:
+
+	MSFT TextFormatter is used to format a line of text and measure its visual layout information. The 
+	TextRun classes: (abstract) TextRun; TextCharacters; TextEndOfParagraph; TextEmbeddedObject; etc...
+	all have properties that are used by the formatter; and may be of use for our design goals. 
+
+		Possible Features:  Nested UI elements in text, collapsable statements (not just folding), word
+							ellipses, etc...
+
+							Also, each TextRun may have its own UI properties: TextRunProperties, which
+							are used by the formatter on the backend.
+
+	The rendering performance may depend on how few, or how many, individual TextRun objects are formatted
+	during the render pass - or how much memory is consumed in the process of rendering. The task of
+	rendering, from our perspective, is very simple from a MSFT integration standpoint. We just fill out
+	the TextRun objects, pass them to the formatter, and render them as geometries using the DrawingContext.
+
+	The MSFT TextSource object will be passed to the formatter - which we will inherit and extend - to
+	meet our design goals, for the UI, for text formatting.
+
+Text Source Performance:
+
+	The text source will be indexed for most cases - except insertion. Avalon Edit has code for what may
+	be known as a "Rope" - which is a binary tree for text. We'll commendere their code and clean it up to
+	meet our code quality constraints! ^_^
