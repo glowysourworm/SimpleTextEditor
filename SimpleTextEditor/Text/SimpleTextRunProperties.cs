@@ -79,7 +79,7 @@ namespace SimpleTextEditor.Text
 
             ValidateCulture(culture);
 
-            PixelsPerDip = pixelsPerDip;
+            this.PixelsPerDip = pixelsPerDip;
             _typeface = typeface;
             _emSize = emSize;
             _emHintingSize = emHintingSize;

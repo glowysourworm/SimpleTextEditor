@@ -232,6 +232,57 @@ namespace SimpleTextEditor.Collection
             ReInitialize(TextString.From(_left.Content, _right.Content));
         }
 
+        /// <summary>
+        /// Appends text to the right-most node of this sub-tree
+        /// </summary>
+        public void Append(TextString content)
+        {
+            // Procedure
+            // 
+            // 1) Recursively append to right-most node(s)
+            // 2) Append text:
+            //      - Node splits at the SplitSize, otherwise it remains a leaf
+            //
+
+            if (content.Length == 0)
+                throw new ArgumentException("RopeNode must have non-zero length");
+
+            // -> Right
+            if (_right != null)
+            {
+                // Adjust index for right branch
+                _right.Append(content);
+                _content.Concat(content.Get());                     // Also, append it on our current node
+            }
+
+            // Leaf
+            else
+            {
+                // >= Split Size
+                if (_content.Length + content.Length >= SplitSize)
+                {
+                    // Append (then pass into re-initialize)
+                    _content.Concat(content.Get());
+
+                    // -> Rebalance() (resets root index)
+                    ReInitialize(_content);
+                }
+
+                // < Split Size
+                else
+                {
+                    // Nothing to change for this root index
+                    _content.Concat(content.Get());
+                }
+            }
+
+            // -> Height Check -> (Yes / No) -> ReBalance
+            ReBalance();
+        }
+
+        /// <summary>
+        /// Inserts text in the node sub-tree
+        /// </summary>
         public void Insert(TextString content, int offset)
         {
             // Procedure

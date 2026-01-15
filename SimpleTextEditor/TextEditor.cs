@@ -4,7 +4,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
-using SimpleTextEditor.Text;
+using SimpleTextEditor.Component;
+using SimpleTextEditor.Component.Interface;
 
 namespace SimpleTextEditor
 {
@@ -43,26 +44,23 @@ namespace SimpleTextEditor
             set { SetValue(CaretBrushProperty, value); }
         }
 
-        SimpleTextEditorCore _core;
+        IDocument _document;
 
         public TextEditor()
         {
             this.Cursor = Cursors.IBeam;
 
-            _core = new SimpleTextEditorCore(this.FontFamily, this.FontSize, this.Foreground, Brushes.Transparent, TextWrapping.Wrap);
+            _document = new Document(this.FontFamily, this.FontSize, this.Foreground, Brushes.Transparent, TextWrapping.Wrap);
         }
 
         public string GetText()
         {
-            return _core.GetText();
+            return "TODO";
         }
 
         public void SetText(string text)
         {
-            if (_core == null)
-                throw new Exception("Control must be loaded before setting text");
-
-            _core.SetText(text);
+            _document.Load(text);
 
             InvalidateMeasure();
             InvalidateVisual();
@@ -70,9 +68,6 @@ namespace SimpleTextEditor
 
         protected override Size MeasureOverride(Size constraint)
         {
-            if (_core == null)
-                return constraint;
-
             if (constraint.Width == 0 ||
                 double.IsNaN(constraint.Width) ||
                 constraint.Height == 0 ||
@@ -85,9 +80,9 @@ namespace SimpleTextEditor
                 constraint.Width -= (this.Padding.Left + this.Padding.Right);
                 constraint.Height -= (this.Padding.Top + this.Padding.Bottom);
 
-                var desiredSize = _core.MeasureText(constraint);
+                var visualData = _document.Measure(constraint);
 
-                return desiredSize;
+                return visualData.DesiredSize;
             }
         }
 
@@ -97,7 +92,7 @@ namespace SimpleTextEditor
 
             if (e.Key == Key.Back)
             {
-                _core.Backspace();
+                _document.RemoveText(_document.GetSource().GetLength() - 1, 1);
                 e.Handled = true;
 
                 InvalidateMeasure();
@@ -108,7 +103,7 @@ namespace SimpleTextEditor
         {
             base.OnTextInput(e);
 
-            _core.AppendText(e.Text);
+            _document.AppendText(e.Text);
 
             InvalidateMeasure();
             InvalidateVisual();
@@ -151,7 +146,8 @@ namespace SimpleTextEditor
         {
             base.OnRender(drawingContext);
 
-            if (_core == null)
+            // Problem!! Have not yet called measure override!!
+            if (_document.LastVisualData == null)
                 return;
 
             Brush background = this.Background;
@@ -170,18 +166,18 @@ namespace SimpleTextEditor
             // Border / Background (Outer Padded Area + Control Area)
             drawingContext.DrawRectangle(background, new Pen(border, this.BorderThickness.Top), new Rect(this.RenderSize));
 
-            var caretBounds = _core.GetCaretRenderBounds();
+            var caretBounds = _document.LastVisualData.CaretBounds;
             var constraint = new Size(this.RenderSize.Width - this.Padding.Left - this.Padding.Right,
                                       this.RenderSize.Height - this.Padding.Top - this.Padding.Bottom);
             var position = new Point(0, this.Padding.Top);
 
-            foreach (var textLine in _core.GetTextLines())
+            foreach (var visualLine in _document.LastVisualData.VisualLines)
             {
                 //var text = new FormattedText(this.TextSource, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, _typeface, this.FontSize, this.Foreground);
 
-                position.X = textLine.Start + this.Padding.Left;
-                position.Y += textLine.TextHeight;
-                textLine.Draw(drawingContext, position, InvertAxes.None);
+                position.X = visualLine.Line.Start + this.Padding.Left;
+                position.Y += visualLine.Line.TextHeight;
+                visualLine.Line.Draw(drawingContext, position, InvertAxes.None);
 
                 //drawingContext.DrawText(text, new Point(this.Padding.Left, this.Padding.Top));
             }

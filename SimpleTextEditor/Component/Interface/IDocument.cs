@@ -1,14 +1,17 @@
-﻿namespace SimpleTextEditor.Component.Interface
+﻿using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Visualization;
+
+namespace SimpleTextEditor.Component.Interface
 {
-    public interface IDocument
+    public interface IDocument : ITextVisualCore, ITextSource
     {
+        /// <summary>
+        /// Returns visual output data from last measure pass
+        /// </summary>
+        public SimpleTextVisualOutputData? LastVisualData { get; }
+
         ITextPosition GetCaretPosition();
         void SetCaretPosition(ITextPosition position);
-
-        int GetLineCount();
-        int GetWordCount();
-        int GetColumnCount();
-        ITextLine GetTextLine(int index);
 
         void Load(string text);
         void Clear();

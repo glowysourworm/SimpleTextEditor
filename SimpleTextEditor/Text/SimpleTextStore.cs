@@ -1,33 +1,53 @@
 ﻿using System.Globalization;
 using System.Windows.Media.TextFormatting;
 
+using SimpleTextEditor.Model;
+using SimpleTextEditor.Text.Interface;
+
 namespace SimpleTextEditor.Text
 {
     // (MSFT Github, CustomTextSource)
     //
     // CustomTextSource is our implementation of TextSource.  This is required to use the WPF
-    // text engine. This implementation is very simplistic as is DOES NOT monitor spans of text
-    // for different properties. The entire text content is considered a single span and all 
-    // changes to the size, alignment, font, etc. are applied across the entire text.
+    // text engine. This implementation utilizes a simple text "Rope" data structure to handle
+    // fast insertions and searches.
     //
-    public class SimpleTextStore : TextSource
+    public class SimpleTextStore : TextSource, ITextSource
     {
-        private string _text;
+        // Text data structure for Get / Set (range). This may be upgraded to handle the 
+        // rest of the text properties; and should use a common character array source. Currently,
+        // the TextString is not shared between nodes.
+        private Rope _textSource;
 
         // Font Rendering Properties
         private SimpleTextRunProperties _properties;
-
-        public string Text
-        {
-            get { return _text; }
-            set { _text = value; }
-        }
 
         public SimpleTextStore(double pixelsPerDip, SimpleTextRunProperties properties)
         {
             this.PixelsPerDip = pixelsPerDip;
 
+            _textSource = new Rope();
             _properties = properties;
+        }
+
+        /// <summary>
+        /// Returns total length of text source
+        /// </summary>
+        public int GetLength()
+        {
+            return _textSource.GetLength();
+        }
+        public void AppendText(string text)
+        {
+            _textSource.Append(text);
+        }
+        public void InsertText(int offset, string text)
+        {
+            _textSource.Insert(offset, text);
+        }
+        public void RemoveText(int offset, int count)
+        {
+            _textSource.Remove(offset, count);
         }
 
         /// <summary>
@@ -42,15 +62,16 @@ namespace SimpleTextEditor.Text
             if (characterIndex < 0)
                 throw new ArgumentOutOfRangeException("characterIndex", "Value must be greater than 0.");
 
-            if (characterIndex >= _text.Length)
+            if (characterIndex >= _textSource.GetLength())
             {
                 return new TextEndOfParagraph(1);
             }
 
             // Create TextCharacters using the current font rendering properties.
-            if (characterIndex < _text.Length)
+            if (characterIndex < _textSource.GetLength())
             {
-                return new TextCharacters(_text, characterIndex, _text.Length - characterIndex, _properties);
+                // TextString.Get() returns a char[] for the text source w/o copying memory
+                return new TextCharacters(_textSource.Get().Get(), characterIndex, _textSource.GetLength() - characterIndex, _properties);
             }
 
             // Return an end-of-paragraph if no more text source.
@@ -59,7 +80,8 @@ namespace SimpleTextEditor.Text
 
         public override TextSpan<CultureSpecificCharacterBufferRange> GetPrecedingText(int characterIndexLimit)
         {
-            var bufferRange = new CharacterBufferRange(_text, 0, characterIndexLimit);
+            // TextString.Get() returns a char[] for the text source w/o copying memory
+            var bufferRange = new CharacterBufferRange(_textSource.Get().Get(), 0, characterIndexLimit);
 
             return new TextSpan<CultureSpecificCharacterBufferRange>(characterIndexLimit, new CultureSpecificCharacterBufferRange(CultureInfo.CurrentUICulture, bufferRange));
         }
