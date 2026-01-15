@@ -17,7 +17,7 @@ namespace SimpleTextEditor.Text
         // Text data structure for Get / Set (range). This may be upgraded to handle the 
         // rest of the text properties; and should use a common character array source. Currently,
         // the TextString is not shared between nodes.
-        private Rope _textSource;
+        private ITextSource _textSource;
 
         // Font Rendering Properties
         private SimpleTextRunProperties _properties;
@@ -26,10 +26,14 @@ namespace SimpleTextEditor.Text
         {
             this.PixelsPerDip = pixelsPerDip;
 
-            _textSource = new Rope();
+            _textSource = new LinearTextSource();
             _properties = properties;
         }
 
+        public TextString Get()
+        {
+            return _textSource.Get();
+        }
         /// <summary>
         /// Returns total length of text source
         /// </summary>
@@ -39,15 +43,15 @@ namespace SimpleTextEditor.Text
         }
         public void AppendText(string text)
         {
-            _textSource.Append(text);
+            _textSource.AppendText(text);
         }
         public void InsertText(int offset, string text)
         {
-            _textSource.Insert(offset, text);
+            _textSource.InsertText(offset, text);
         }
         public void RemoveText(int offset, int count)
         {
-            _textSource.Remove(offset, count);
+            _textSource.RemoveText(offset, count);
         }
 
         /// <summary>

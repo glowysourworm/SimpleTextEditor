@@ -28,7 +28,7 @@ namespace SimpleTextEditor.Extension
                     // (More) White Space
                     if (nextSpace)
                     {
-                        result.Add(new StringLocator(text, firstIndex, index - firstIndex + 1));
+                        result.Add(new StringLocator(text, firstIndex, index - firstIndex));
                     }
 
                     // Single White Space
@@ -36,6 +36,9 @@ namespace SimpleTextEditor.Extension
                     {
                         result.Add(new StringLocator(text, firstIndex, 1));
                     }
+
+                    firstSpace = false;
+                    nextSpace = false;
                 }
             }
 

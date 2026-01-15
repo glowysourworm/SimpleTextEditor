@@ -8,7 +8,7 @@ namespace SimpleTextEditor.Sample
         {
             InitializeComponent();
 
-            this.Editor.SetText("Welcome to Simple Text Editor!");
+            this.Editor.SetText("Welcome to  Simple Text Editor!");
         }
     }
 }

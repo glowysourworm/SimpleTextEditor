@@ -2,6 +2,7 @@
 using System.Windows.Media;
 
 using SimpleTextEditor.Component.Interface;
+using SimpleTextEditor.Model;
 using SimpleTextEditor.Text;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Visualization;
@@ -74,6 +75,11 @@ namespace SimpleTextEditor.Component
         public int GetLength()
         {
             throw new NotImplementedException();
+        }
+
+        public TextString Get()
+        {
+            return _visualCore.GetSource().Get();
         }
     }
 }

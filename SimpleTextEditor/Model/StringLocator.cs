@@ -52,7 +52,7 @@
 
         public override string ToString()
         {
-            return GetSubString();
+            return string.Format("Index={0} Length={1} Substring=\"{2}\"", this.Index, this.Length, GetSubString());
         }
     }
 }
