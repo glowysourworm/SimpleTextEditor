@@ -19,15 +19,24 @@ namespace SimpleTextEditor.Text.Visualization
         // Shared paragraph properties
         SimpleTextParagraphProperties _properties;
 
+        // Extra cache of output for debugging
+        string _cachedOutput;
+
         public TextLine Line { get { return _textLine; } }
         public ITextPosition Position { get { return _position; } }
         public SimpleTextParagraphProperties Properties { get { return _properties; } }
 
-        public SimpleTextLine(TextLine textLine, ITextPosition position, SimpleTextParagraphProperties properties)
+        public SimpleTextLine(TextLine textLine, ITextPosition position, SimpleTextParagraphProperties properties, string cachedOutput)
         {
             _textLine = textLine;
             _position = position;
             _properties = properties;
+            _cachedOutput = cachedOutput;
+        }
+
+        public override string ToString()
+        {
+            return _cachedOutput;
         }
     }
 }

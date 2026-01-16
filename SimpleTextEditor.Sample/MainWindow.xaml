@@ -5,6 +5,7 @@
         Title="Simple Text Editor">
     <Grid>
         <core:TextEditor x:Name="Editor" 
+                         Background="#FFEFEFEF"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"
                          IsEnabled="True" />

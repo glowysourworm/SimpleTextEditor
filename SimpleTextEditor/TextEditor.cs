@@ -80,9 +80,21 @@ namespace SimpleTextEditor
                 constraint.Width -= (this.Padding.Left + this.Padding.Right);
                 constraint.Height -= (this.Padding.Top + this.Padding.Bottom);
 
+                // Efficiency check is built into the Document implementation
                 var visualData = _document.Measure(constraint);
 
-                return visualData.DesiredSize;
+                this.MinWidth = visualData.DesiredSize.Width;
+                this.MinHeight = visualData.DesiredSize.Height;
+
+                var result = new Size(visualData.DesiredSize.Width, visualData.DesiredSize.Height);
+
+                if (visualData.DesiredSize.Width > constraint.Width)
+                    result.Width = constraint.Width;
+
+                if (visualData.DesiredSize.Height > constraint.Height)
+                    result.Height = constraint.Height;
+
+                return result;
             }
         }
 
@@ -90,9 +102,10 @@ namespace SimpleTextEditor
         {
             base.OnKeyDown(e);
 
-            if (e.Key == Key.Back)
+            if (e.Key == Key.Back && _document.Get().Length > 0)
             {
                 _document.RemoveText(_document.GetSource().GetLength() - 1, 1);
+
                 e.Handled = true;
 
                 InvalidateMeasure();
@@ -173,13 +186,9 @@ namespace SimpleTextEditor
 
             foreach (var visualLine in _document.LastVisualData.VisualLines)
             {
-                //var text = new FormattedText(this.TextSource, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, _typeface, this.FontSize, this.Foreground);
-
                 position.X = visualLine.Line.Start + this.Padding.Left;
                 position.Y += visualLine.Line.TextHeight;
                 visualLine.Line.Draw(drawingContext, position, InvertAxes.None);
-
-                //drawingContext.DrawText(text, new Point(this.Padding.Left, this.Padding.Top));
             }
 
             if (caretBounds.Height > 0)
@@ -189,6 +198,8 @@ namespace SimpleTextEditor
 
                 drawingContext.DrawRectangle(caret, null, caretBounds);
             }
+
+
 
             /*
             Brush background = this.Background;

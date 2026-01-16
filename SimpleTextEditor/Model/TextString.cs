@@ -62,7 +62,7 @@ namespace SimpleTextEditor.Model
             var result = new char[_content.Length - count];
 
             Array.Copy(_content, 0, result, 0, offset);
-            Array.Copy(_content, offset + count, result, offset, count - offset);
+            Array.Copy(_content, offset + count, result, offset, _content.Length - offset - count);
 
             _content = result;
         }

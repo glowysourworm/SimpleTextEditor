@@ -27,16 +27,23 @@ namespace SimpleTextEditor.Text.Visualization
         /// </summary>
         public Rect CaretBounds { get; set; }
 
-        public SimpleTextVisualOutputData(IEnumerable<SimpleTextLine> visualLines, Size constraint, Size desiredSize, Rect caretBounds)
+        /// <summary>
+        /// Length (in characters) of text output
+        /// </summary>
+        public int SourceLength { get; set; }
+
+        public SimpleTextVisualOutputData(IEnumerable<SimpleTextLine> visualLines, Size constraint, Size desiredSize, Rect caretBounds, int sourceLength)
         {
             this.ConstraintSize = constraint;
             this.DesiredSize = desiredSize;
             this.CaretBounds = caretBounds;
+            this.SourceLength = sourceLength;
 
             _visualLines = new Dictionary<int, SimpleTextLine>();
 
             foreach (var line in visualLines)
                 _visualLines.Add(line.Position.VisualLineNumber, line);
+
         }
 
         public SimpleTextLine GetLine(int visualLineNumber)

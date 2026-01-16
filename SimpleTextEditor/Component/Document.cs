@@ -47,6 +47,13 @@ namespace SimpleTextEditor.Component
 
         public SimpleTextVisualOutputData Measure(Size constraint)
         {
+            // Trying to reduce measurement cost
+            if (_visualOutputData != null &&
+                _visualOutputData.DesiredSize.Width <= constraint.Width &&
+                _visualOutputData.DesiredSize.Height <= constraint.Height &&
+                _visualOutputData.SourceLength == _visualCore.GetSource().GetLength())
+                return _visualOutputData;
+
             _visualOutputData = _visualCore.Measure(constraint);
 
             return _visualOutputData;

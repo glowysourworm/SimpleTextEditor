@@ -39,16 +39,27 @@ namespace SimpleTextEditor.Text
             var linePosition = new Point();
             var textLines = new List<SimpleTextLine>();
             var caretBounds = new Rect();
+            var lineNumber = 0;
+            var paragraphNumber = 1;
 
             TextLineBreak lastLineBreak = null;
 
-            // Format each line of text from the text store and draw it.
-            while (characterPosition < textStore.GetLength())
+            // Format each line of text from the text store and draw it. EOL character requires the extra <= pass
+            // (I think) which accounts for the extra "character"
+            //
+            while (characterPosition <= textStore.GetLength())
             {
+                // Line Number
+                lineNumber++;
+
                 // Create a textline from the text store using the TextFormatter object. (CUSTOMIZE!!!)
                 var textLine = _formatter.FormatLine(textStore, characterPosition, controlWidth, _visualInputData.ParagraphProperties, lastLineBreak);
 
                 lastLineBreak = textLine.GetTextLineBreak();
+
+                // NOT SURE ABOUT THIS ONE!
+                if (lastLineBreak != null)
+                    paragraphNumber++;
 
                 // Measure the text line
                 desiredHeight += textLine.TextHeight;
@@ -68,8 +79,14 @@ namespace SimpleTextEditor.Text
                 // (This is essentially for the caret)
                 lineHeight = textLine.TextHeight;
 
-                // Use these to render w/o re-formatting
-                textLines.Add(new SimpleTextLine(textLine, new TextPosition(), _visualInputData.ParagraphProperties));
+                // Create text position for the line
+                var position = new TextPosition(characterPosition - textLine.Length, lineNumber, 0, lineNumber, paragraphNumber);
+
+                // Use these to render w/o re-formatting (NOTE*** THE TEXTLINE IS RECEIVING AN EXTRA CHARACTER?!)
+                textLines.Add(new SimpleTextLine(textLine,
+                                                 position,
+                                                 _visualInputData.ParagraphProperties,
+                                                 textStore.Get().GetSubString(characterPosition - textLine.Length, textLine.Length - 1)));
             }
 
             // Measure Caret while we're here (check for empty text)
@@ -81,7 +98,7 @@ namespace SimpleTextEditor.Text
             caretBounds.Width = 2;
             caretBounds.Height = lineHeight;
 
-            return new SimpleTextVisualOutputData(textLines, constraint, new Size(desiredWidth, desiredHeight), caretBounds);
+            return new SimpleTextVisualOutputData(textLines, constraint, new Size(desiredWidth, desiredHeight), caretBounds, textStore.GetLength());
         }
 
         /*
