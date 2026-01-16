@@ -8,7 +8,7 @@
     public class SimpleTextParagraph
     {
         // Dictionary of lines for this paragraph (by line number)
-        Dictionary<int, SimpleTextLine> _lines;
+        Dictionary<int, SimpleTextElement> _lines;
 
         // Paragraph number
         int _paragraphNumber;
@@ -17,17 +17,17 @@
         public SimpleTextParagraph(int paragraphNumber)
         {
             _paragraphNumber = paragraphNumber;
-            _lines = new Dictionary<int, SimpleTextLine>();
+            _lines = new Dictionary<int, SimpleTextElement>();
         }
 
-        public void AddLine(SimpleTextLine line)
+        public void AddLine(SimpleTextElement line)
         {
             if (line.Position.ParagraphNumber != _paragraphNumber)
                 throw new ArgumentException("Mismatching paragraph numbers!");
 
             _lines.Add(line.Position.VisualLineNumber, line);
         }
-        public SimpleTextLine GetLine(int visualLineNumber)
+        public SimpleTextElement GetLine(int visualLineNumber)
         {
             return _lines[visualLineNumber];
         }

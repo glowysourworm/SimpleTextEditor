@@ -9,5 +9,6 @@ namespace SimpleTextEditor.Text.Interface
         void AppendText(string text);
         void InsertText(int offset, string text);
         void RemoveText(int offset, int count);
+        int Search(char character, int startIndex);
     }
 }

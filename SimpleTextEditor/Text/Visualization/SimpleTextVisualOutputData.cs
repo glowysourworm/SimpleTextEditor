@@ -5,55 +5,52 @@ namespace SimpleTextEditor.Text.Visualization
     public class SimpleTextVisualOutputData
     {
         // Visual lines for the visualization
-        Dictionary<int, SimpleTextLine> _visualLines;
-
-        /// <summary>
-        /// Resulting visual lines
-        /// </summary>
-        public IEnumerable<SimpleTextLine> VisualLines { get { return _visualLines.Values; } }
+        List<SimpleTextElement> _visualElements;
 
         /// <summary>
         /// Render size constraint from the control
         /// </summary>
-        public Size ConstraintSize { get; set; }
+        public Size ConstraintSize { get; }
 
         /// <summary>
         /// Desired render size via MSFT TextFormatting (see TextFormatter.FormatLine(...))
         /// </summary>
-        public Size DesiredSize { get; set; }
+        public Size DesiredSize { get; }
 
         /// <summary>
         /// Desired render bounds for the caret
         /// </summary>
-        public Rect CaretBounds { get; set; }
+        public Rect CaretBounds { get; }
 
         /// <summary>
         /// Length (in characters) of text output
         /// </summary>
-        public int SourceLength { get; set; }
+        public int SourceLength { get; }
 
-        public SimpleTextVisualOutputData(IEnumerable<SimpleTextLine> visualLines, Size constraint, Size desiredSize, Rect caretBounds, int sourceLength)
+        /// <summary>
+        /// Number of text elements in the output data
+        /// </summary>
+        public int ElementCount { get; }
+
+        /// <summary>
+        /// Returns collection of visual elements
+        /// </summary>
+        public IEnumerable<SimpleTextElement> VisualElements { get { return _visualElements; } }
+
+        public SimpleTextVisualOutputData(IEnumerable<SimpleTextElement> visualElements, Size constraint, Size desiredSize, Rect caretBounds, int sourceLength)
         {
             this.ConstraintSize = constraint;
             this.DesiredSize = desiredSize;
             this.CaretBounds = caretBounds;
             this.SourceLength = sourceLength;
 
-            _visualLines = new Dictionary<int, SimpleTextLine>();
-
-            foreach (var line in visualLines)
-                _visualLines.Add(line.Position.VisualLineNumber, line);
+            _visualElements = new List<SimpleTextElement>(visualElements);
 
         }
 
-        public SimpleTextLine GetLine(int visualLineNumber)
+        public SimpleTextElement GetElement(int index)
         {
-            return _visualLines[visualLineNumber];
-        }
-
-        public SimpleTextParagraphProperties GetParagraphProperties(int visualLineNumber)
-        {
-            return _visualLines[visualLineNumber].Properties;
+            return _visualElements[index];
         }
     }
 }

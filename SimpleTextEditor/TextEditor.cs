@@ -44,13 +44,33 @@ namespace SimpleTextEditor
             set { SetValue(CaretBrushProperty, value); }
         }
 
-        IDocument _document;
+        // Have to wait for control loading event to set the text properties
+        IDocument? _document;
+
+        Point? _mouseDownPoint;
+        Rect _mouseSelectionRect;
 
         public TextEditor()
         {
             this.Cursor = Cursors.IBeam;
 
-            _document = new Document(this.FontFamily, this.FontSize, this.Foreground, Brushes.Transparent, TextWrapping.Wrap);
+            _document = null;
+            _mouseSelectionRect = new Rect();
+
+            this.Loaded += TextEditor_Loaded;
+        }
+
+        private void TextEditor_Loaded(object sender, RoutedEventArgs e)
+        {
+            _document = new Document(this.FontFamily,
+                                     this.FontSize,
+                                     this.Foreground,
+                                     Brushes.Transparent,
+                                     Brushes.CadetBlue,
+                                     Brushes.White,
+                                     TextWrapping.Wrap);
+
+            InvalidateVisual();
         }
 
         public string GetText()
@@ -60,6 +80,9 @@ namespace SimpleTextEditor
 
         public void SetText(string text)
         {
+            if (_document == null)
+                throw new Exception("Must wait until control loads to set text");
+
             _document.Load(text);
 
             InvalidateMeasure();
@@ -71,7 +94,8 @@ namespace SimpleTextEditor
             if (constraint.Width == 0 ||
                 double.IsNaN(constraint.Width) ||
                 constraint.Height == 0 ||
-                double.IsNaN(constraint.Height))
+                double.IsNaN(constraint.Height) ||
+                _document == null)
                 return constraint;
 
             else
@@ -100,11 +124,14 @@ namespace SimpleTextEditor
 
         protected override void OnKeyDown(KeyEventArgs e)
         {
+            if (_document == null)
+                return;
+
             base.OnKeyDown(e);
 
-            if (e.Key == Key.Back && _document.Get().Length > 0)
+            if (e.Key == Key.Back && _document.GetTextLength() > 0)
             {
-                _document.RemoveText(_document.GetSource().GetLength() - 1, 1);
+                _document.RemoveText(_document.GetTextLength() - 1, 1);
 
                 e.Handled = true;
 
@@ -114,6 +141,9 @@ namespace SimpleTextEditor
         }
         protected override void OnTextInput(TextCompositionEventArgs e)
         {
+            if (_document == null)
+                return;
+
             base.OnTextInput(e);
 
             _document.AppendText(e.Text);
@@ -121,12 +151,6 @@ namespace SimpleTextEditor
             InvalidateMeasure();
             InvalidateVisual();
         }
-
-        protected override void OnPreviewTextInput(TextCompositionEventArgs e)
-        {
-            base.OnPreviewTextInput(e);
-        }
-
 
         protected override void OnLostFocus(RoutedEventArgs e)
         {
@@ -139,6 +163,10 @@ namespace SimpleTextEditor
         {
             base.OnMouseDown(e);
 
+            // Store Mouse Down Point
+            if (e.LeftButton == MouseButtonState.Pressed)
+                _mouseDownPoint = e.GetPosition(this);
+
             if (this.IsFocused)
                 return;
 
@@ -147,17 +175,40 @@ namespace SimpleTextEditor
 
             InvalidateVisual();
         }
-
-        private static void OnTextSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        protected override void OnMouseMove(MouseEventArgs e)
         {
-            var editor = d as TextEditor;
+            base.OnMouseMove(e);
 
-            editor?.SetText(e.NewValue as string ?? "");
+            if (_mouseDownPoint != null)
+            {
+                var point = e.GetPosition(this);
+                var left = Math.Min(_mouseDownPoint.Value.X, point.X);
+                var top = Math.Min(_mouseDownPoint.Value.Y, point.Y);
+                var right = Math.Max(_mouseDownPoint.Value.X, point.X);
+                var bottom = Math.Max(_mouseDownPoint.Value.Y, point.Y);
+
+                _mouseSelectionRect.X = left;
+                _mouseSelectionRect.Y = top;
+                _mouseSelectionRect.Width = right - left;
+                _mouseSelectionRect.Height = bottom - top;
+
+                InvalidateVisual();
+            }
+        }
+        protected override void OnMouseUp(MouseButtonEventArgs e)
+        {
+            base.OnMouseUp(e);
+
+            if (e.LeftButton == MouseButtonState.Released)
+                _mouseDownPoint = null;
         }
 
         protected override void OnRender(DrawingContext drawingContext)
         {
             base.OnRender(drawingContext);
+
+            if (_document == null)
+                return;
 
             // Problem!! Have not yet called measure override!!
             if (_document.LastVisualData == null)
@@ -184,11 +235,26 @@ namespace SimpleTextEditor
                                       this.RenderSize.Height - this.Padding.Top - this.Padding.Bottom);
             var position = new Point(0, this.Padding.Top);
 
-            foreach (var visualLine in _document.LastVisualData.VisualLines)
+            foreach (var visualLine in _document.LastVisualData.VisualElements)
             {
-                position.X = visualLine.Line.Start + this.Padding.Left;
-                position.Y += visualLine.Line.TextHeight;
-                visualLine.Line.Draw(drawingContext, position, InvertAxes.None);
+                position.X = visualLine.Element.Start + this.Padding.Left;
+                position.Y += visualLine.Element.TextHeight;
+
+                var visualLineRect = new Rect(position, new Size(visualLine.Element.Width, visualLine.Element.Height));
+
+                // Highlighted Text (This could be done with MSFT TextLine; but it's hard to know what to override)
+                if (_mouseDownPoint != null && visualLineRect.IntersectsWith(_mouseSelectionRect))
+                {
+                    foreach (var glyphRun in visualLine.Element.GetIndexedGlyphRuns())
+                    {
+
+                        //geometry.Transform = new TranslateTransform(position.X, position.Y);
+                        //drawingContext.DrawGeometry(Brushes.Blue, new Pen(Brushes.Blue, 1), geometry);
+                    }
+                }
+
+                else
+                    visualLine.Element.Draw(drawingContext, position, InvertAxes.None);
             }
 
             if (caretBounds.Height > 0)

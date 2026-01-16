@@ -36,5 +36,15 @@ namespace SimpleTextEditor.Text
         {
             _rope.Remove(offset, count);
         }
+
+        public int Search(char character, int startIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetMouseInfo(MouseData mouseData)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

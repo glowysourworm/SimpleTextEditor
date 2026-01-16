@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 
+using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Visualization;
 
 namespace SimpleTextEditor.Text.Interface
@@ -11,14 +12,25 @@ namespace SimpleTextEditor.Text.Interface
     /// </summary>
     public interface ITextVisualCore
     {
-        /// <summary>
-        /// Sets reference to the simple text store
-        /// </summary>
-        ITextSource GetSource();
+        string GetTextCopy();
+        int GetTextLength();
+        void AppendText(string text);
+        void InsertText(int offset, string text);
+        void RemoveText(int offset, int count);
+        int SearchText(char character, int startIndex);
 
         /// <summary>
         /// Measure override for WPF controls. Returns output data for rendering, using the provided control constraint.
         /// </summary>
         SimpleTextVisualOutputData Measure(Size constraint);
+
+        /// <summary>
+        /// Sets mouse information for text selection processing. The text run properties must be pre-set with mouse
+        /// selection properties (for the UI) during formatting. The Point objects may be null.
+        /// </summary>
+        /// <param name="topLeft">Top Left with respect to the TextEditor UI</param>
+        /// <param name="bottomRight">Bottom Right with respect to the TextEditor UI</param>
+        /// <param name="leftMouseButton">Left mouse button state</param>
+        void SetMouseInfo(MouseData mouseData);
     }
 }

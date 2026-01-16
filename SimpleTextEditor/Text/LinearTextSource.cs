@@ -36,5 +36,20 @@ namespace SimpleTextEditor.Text
         {
             _source.Remove(offset, count);
         }
+
+        public int Search(char character, int startIndex)
+        {
+            var result = _source.Get().IndexOf(character);
+
+            if (result >= startIndex)
+                return result;
+
+            return -1;
+        }
+
+        public void SetMouseInfo(MouseData mouseData)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

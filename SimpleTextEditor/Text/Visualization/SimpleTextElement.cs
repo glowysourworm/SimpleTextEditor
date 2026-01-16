@@ -8,30 +8,32 @@ namespace SimpleTextEditor.Text.Visualization
     /// Container for MSFT (abstract) TextLine, which carries data linking the visualization of
     /// the text source, and the actual text source.
     /// </summary>
-    public class SimpleTextLine
+    public class SimpleTextElement
     {
         // Visual text line provided by the formatter
-        TextLine _textLine;
+        TextLine _textElement;
 
         // Position of the line (source and visual) (also has line data)
         ITextPosition _position;
 
         // Shared paragraph properties
-        SimpleTextParagraphProperties _properties;
+        //SimpleTextParagraphProperties _properties;
+        SimpleTextRunProperties _properties;
 
         // Extra cache of output for debugging
         string _cachedOutput;
 
-        public TextLine Line { get { return _textLine; } }
+        public TextLine Element { get { return _textElement; } }
         public ITextPosition Position { get { return _position; } }
-        public SimpleTextParagraphProperties Properties { get { return _properties; } }
+        public int Length { get { return _textElement.Length; } }
+        public SimpleTextRunProperties Properties { get { return _properties; } }
 
-        public SimpleTextLine(TextLine textLine, ITextPosition position, SimpleTextParagraphProperties properties, string cachedOutput)
+        public SimpleTextElement(TextLine textElement, ITextPosition position, SimpleTextRunProperties properties, string cachedOutput)
         {
-            _textLine = textLine;
+            _textElement = textElement;
             _position = position;
-            _properties = properties;
             _cachedOutput = cachedOutput;
+            _properties = properties;
         }
 
         public override string ToString()

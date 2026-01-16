@@ -3,6 +3,7 @@ using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Visualization;
 
 namespace SimpleTextEditor.Text
 {
@@ -20,14 +21,18 @@ namespace SimpleTextEditor.Text
         private ITextSource _textSource;
 
         // Font Rendering Properties
-        private SimpleTextRunProperties _properties;
+        private SimpleTextVisualInputData _visualInputData;
+        private TextPropertySet _currentTextPropertySet;
 
-        public SimpleTextStore(double pixelsPerDip, SimpleTextRunProperties properties)
+        // Mouse Interaction Data
+        private MouseData _mouseData;
+
+        public SimpleTextStore(SimpleTextVisualInputData visualInputData)
         {
-            this.PixelsPerDip = pixelsPerDip;
-
+            _visualInputData = visualInputData;
+            _currentTextPropertySet = TextPropertySet.Normal;
             _textSource = new LinearTextSource();
-            _properties = properties;
+            _mouseData = new MouseData();
         }
 
         public TextString Get()
@@ -57,25 +62,45 @@ namespace SimpleTextEditor.Text
         /// <summary>
         /// Used by the TextFormatter object to retrieve a run of text from the text source. 
         /// </summary>
-        /// <param name="characterIndex"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentOutOfRangeException"></exception>
         public override TextRun GetTextRun(int characterIndex)
         {
             // Make sure text source index is in bounds.
             if (characterIndex < 0)
                 throw new ArgumentOutOfRangeException("characterIndex", "Value must be greater than 0.");
 
+            // PERFORMANCE PROBLEM:  WE HAVE TO PRODUCE A TEXT MEASUREMENT TO SEE IF THE MOUSE
+            // IS HIGHLIGHTING THE TEXT! SO, THIS FORMATTED TEXT WILL ALREADY BE AVAILABLE.
+            //
+            //var text = _textSource.Get().GetSubString(characterIndex, _textSource.GetLength())
+            //var formattedText = new FormattedText();
+
+            // End of Line
+            if (_textSource.Search('\r', characterIndex) >= 0)
+            {
+                return new TextEndOfLine(1);
+            }
+
+            // End of Paragraph
             if (characterIndex >= _textSource.GetLength())
             {
                 return new TextEndOfParagraph(1);
             }
 
+            // PERFORMANCE!  This needs to be built into the text source. 
+            //if (_textSource.Search(' ', characterIndex) >= 0)
+            //{
+
+            //}
+
+
             // Create TextCharacters using the current font rendering properties.
             if (characterIndex < _textSource.GetLength())
             {
                 // TextString.Get() returns a char[] for the text source w/o copying memory
-                return new TextCharacters(_textSource.Get().Get(), characterIndex, _textSource.GetLength() - characterIndex, _properties);
+                return new TextCharacters(_textSource.Get().Get(),
+                                          characterIndex,
+                                          _textSource.GetLength() - characterIndex,
+                                          _visualInputData.GetProperties(_currentTextPropertySet));
             }
 
             // Return an end-of-paragraph if no more text source.
@@ -93,6 +118,24 @@ namespace SimpleTextEditor.Text
         public override int GetTextEffectCharacterIndexFromTextSourceCharacterIndex(int textSourceCharacterIndex)
         {
             throw new Exception("The method or operation is not implemented.");
+        }
+
+        public int Search(char character, int startIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Selects text properties for next draw pass. Requires that the formatter be invalidated.
+        /// </summary>
+        public void SelectTextProperties(TextPropertySet propertySet)
+        {
+            _currentTextPropertySet = propertySet;
+        }
+
+        public TextPropertySet GetCurrentTextProperties()
+        {
+            return _currentTextPropertySet;
         }
     }
 }

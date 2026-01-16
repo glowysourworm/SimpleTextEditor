@@ -1,6 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Media;
 
+using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Visualization;
 
@@ -20,21 +21,72 @@ namespace SimpleTextEditor.Text
         // MSFT Advanced text formatting
         SimpleTextEditorFormatter _formatter;
 
-        public SimpleTextVisualCore(FontFamily fontFamily, double fontSize, Brush foreground, Brush background, TextWrapping textWrapping)
+        public SimpleTextVisualCore(FontFamily fontFamily,
+                                    double fontSize,
+                                    Brush foreground,
+                                    Brush background,
+                                    Brush highlightForeground,
+                                    Brush highlightBackground,
+                                    TextWrapping textWrapping)
         {
-            _visualInputData = new SimpleTextVisualInputData(fontFamily, fontSize, foreground, background, textWrapping);
-            _formatter = new SimpleTextEditorFormatter(_visualInputData);
-            _textStore = new SimpleTextStore(SimpleTextVisualCore.PixelsPerDip, _visualInputData.TextProperties);
+            _visualInputData = new SimpleTextVisualInputData(fontFamily, fontSize, foreground, background, highlightForeground, highlightBackground, textWrapping);
+            _textStore = new SimpleTextStore(_visualInputData);
+            _formatter = new SimpleTextEditorFormatter(_textStore, _visualInputData);
         }
 
-        public ITextSource GetSource()
+        public void AppendText(string text)
         {
-            return _textStore;
+            // Insert
+            var insertIndex = _textStore.GetLength();
+
+            // Append to source
+            _textStore.AppendText(text);
+
+            // Update TextRun Cache
+            _formatter.UpdateCache(insertIndex, text.Length, -1);
+        }
+
+        public string GetTextCopy()
+        {
+            return _textStore.ToString() ?? string.Empty;
+        }
+
+        public int GetTextLength()
+        {
+            return _textStore.GetLength();
+        }
+
+        public void InsertText(int offset, string text)
+        {
+            // Insert
+            _textStore.InsertText(offset, text);
+
+            // Update TextRun Cache
+            _formatter.UpdateCache(offset, text.Length, -1);
         }
 
         public SimpleTextVisualOutputData Measure(Size constraint)
         {
-            return _formatter.MeasureText(_textStore, constraint);
+            return _formatter.MeasureText(constraint);
+        }
+
+        public void RemoveText(int offset, int count)
+        {
+            // Remove
+            _textStore.RemoveText(offset, count);
+
+            // Update TextRun Cache
+            _formatter.UpdateCache(offset, -1, offset);
+        }
+
+        public int SearchText(char character, int startIndex)
+        {
+            return _textStore.Search(character, startIndex);
+        }
+
+        public void SetMouseInfo(MouseData mouseData)
+        {
+            _formatter.SetMouseInfo(mouseData);
         }
     }
 }

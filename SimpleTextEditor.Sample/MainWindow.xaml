@@ -5,7 +5,10 @@
         Title="Simple Text Editor">
     <Grid>
         <core:TextEditor x:Name="Editor" 
-                         Background="#FFEFEFEF"
+                         FontFamily="Consolas"
+                         FontSize="14"
+                         Padding="10"
+                         Background="White"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"
                          IsEnabled="True" />
