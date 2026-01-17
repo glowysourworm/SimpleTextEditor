@@ -105,20 +105,18 @@ namespace SimpleTextEditor
                 constraint.Height -= (this.Padding.Top + this.Padding.Bottom);
 
                 // Efficiency check is built into the Document implementation
-                var visualData = _document.Measure(constraint);
+                var desiredSize = _document.Measure(constraint);
 
-                this.MinWidth = visualData.DesiredSize.Width;
-                this.MinHeight = visualData.DesiredSize.Height;
+                this.MinWidth = desiredSize.Width;
+                this.MinHeight = desiredSize.Height;
 
-                var result = new Size(visualData.DesiredSize.Width, visualData.DesiredSize.Height);
+                if (desiredSize.Width > constraint.Width)
+                    desiredSize.Width = constraint.Width;
 
-                if (visualData.DesiredSize.Width > constraint.Width)
-                    result.Width = constraint.Width;
+                if (desiredSize.Height > constraint.Height)
+                    desiredSize.Height = constraint.Height;
 
-                if (visualData.DesiredSize.Height > constraint.Height)
-                    result.Height = constraint.Height;
-
-                return result;
+                return desiredSize;
             }
         }
 
@@ -129,9 +127,9 @@ namespace SimpleTextEditor
 
             base.OnKeyDown(e);
 
-            if (e.Key == Key.Back && _document.GetTextLength() > 0)
+            if (e.Key == Key.Back && _document.TextLength > 0)
             {
-                _document.RemoveText(_document.GetTextLength() - 1, 1);
+                _document.ProcessRemoveText(_document.TextLength - 1, 1);
 
                 e.Handled = true;
 
@@ -146,7 +144,7 @@ namespace SimpleTextEditor
 
             base.OnTextInput(e);
 
-            _document.AppendText(e.Text);
+            _document.ProcessInputText(e.Text);
 
             InvalidateMeasure();
             InvalidateVisual();
@@ -210,10 +208,6 @@ namespace SimpleTextEditor
             if (_document == null)
                 return;
 
-            // Problem!! Have not yet called measure override!!
-            if (_document.LastVisualData == null)
-                return;
-
             Brush background = this.Background;
             Brush border = this.BorderBrush;
             Brush caret = this.CaretBrush;
@@ -230,12 +224,12 @@ namespace SimpleTextEditor
             // Border / Background (Outer Padded Area + Control Area)
             drawingContext.DrawRectangle(background, new Pen(border, this.BorderThickness.Top), new Rect(this.RenderSize));
 
-            var caretBounds = _document.LastVisualData.CaretBounds;
+            var caretBounds = _document.GetCaretBounds();
             var constraint = new Size(this.RenderSize.Width - this.Padding.Left - this.Padding.Right,
                                       this.RenderSize.Height - this.Padding.Top - this.Padding.Bottom);
             var position = new Point(0, this.Padding.Top);
 
-            foreach (var visualLine in _document.LastVisualData.VisualElements)
+            foreach (var visualLine in _document.GetVisualElements())
             {
                 position.X = visualLine.Element.Start + this.Padding.Left;
                 position.Y += visualLine.Element.TextHeight;

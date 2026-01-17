@@ -17,7 +17,7 @@ namespace SimpleTextEditor.Component
         // Carries the primary text source
         readonly ITextVisualCore _visualCore;
 
-        public SimpleTextVisualOutputData? LastVisualData { get { return _visualOutputData; } }
+        public int TextLength { get { return _visualCore.GetTextLength(); } }
 
         public Document(FontFamily fontFamily,
                         double fontSize,
@@ -31,81 +31,80 @@ namespace SimpleTextEditor.Component
             _visualOutputData = null;
         }
 
-        public void AppendText(string text)
-        {
-            _visualCore.AppendText(text);
-        }
-
-        public void InsertText(int offset, string text)
-        {
-            _visualCore.InsertText(offset, text);
-        }
-
+        #region (public) IDocument Methods
         public void Load(string text)
         {
             _visualCore.AppendText(text);
         }
-
-        public SimpleTextVisualOutputData Measure(Size constraint)
+        public Size Measure(Size constraint)
         {
             // Trying to reduce measurement cost
             if (_visualOutputData != null &&
                 _visualOutputData.DesiredSize.Width <= constraint.Width &&
                 _visualOutputData.DesiredSize.Height <= constraint.Height &&
                 _visualOutputData.SourceLength == _visualCore.GetTextLength())
-                return _visualOutputData;
+                return _visualOutputData.DesiredSize;
 
             _visualOutputData = _visualCore.Measure(constraint);
 
-            return _visualOutputData;
+            return _visualOutputData.DesiredSize;
         }
-
-        public void RemoveText(int offset, int count)
+        public Rect GetCaretBounds()
+        {
+            return new Rect();
+        }
+        public void ProcessUILeftClick(Point pointUI)
+        {
+            throw new NotImplementedException();
+        }
+        public void ProcessControlInput(ControlInput input)
+        {
+            switch (input)
+            {
+                case ControlInput.ArrowUp:
+                    break;
+                case ControlInput.ArrowDown:
+                    break;
+                case ControlInput.ArrowLeft:
+                    break;
+                case ControlInput.ArrowRight:
+                    break;
+                case ControlInput.WordLeft:
+                    break;
+                case ControlInput.WordRight:
+                    break;
+                case ControlInput.EndOfLine:
+                    break;
+                case ControlInput.BeginningOfLine:
+                    break;
+                case ControlInput.PageUp:
+                    break;
+                case ControlInput.PageDown:
+                    break;
+                default:
+                    throw new Exception("Unhandled ControlInput Type");
+            }
+        }
+        public void ProcessInputText(string inputText)
+        {
+            _visualCore.AppendText(inputText);
+        }
+        public void ProcessRemoveText(int offset, int count)
         {
             _visualCore.RemoveText(offset, count);
         }
-
-        public ITextPosition GetCaretPosition()
+        public IEnumerable<SimpleTextElement> GetVisualElements()
         {
-            throw new NotImplementedException();
+            return _visualOutputData == null ? new List<SimpleTextElement>() : _visualOutputData.VisualElements;
         }
-
-        public void SetCaretPosition(ITextPosition position)
-        {
-            throw new NotImplementedException();
-        }
-
         public void Clear()
         {
             throw new NotImplementedException();
         }
+        #endregion
 
-        public int GetLength()
-        {
-            throw new NotImplementedException();
-        }
-
-        public string GetTextCopy()
-        {
-            return _visualCore.GetTextCopy();
-        }
-
-        public int GetTextLength()
-        {
-            return _visualCore.GetTextLength();
-        }
-
-        public int SearchText(char character, int startIndex)
-        {
-            return _visualCore.SearchText(character, startIndex);
-        }
-
-        public void SetMouseInfo(MouseData mouseData)
-        {
-            throw new NotImplementedException();
-        }
-
-        public int GetTextOffsetFromUI(Point pointUI)
+        #region (private) UI <--> ITextVisualCore Methods
+        private int GetTextOffsetFromUI(Point pointUI)
         {
             if (_visualOutputData != null)
             {
@@ -125,5 +124,6 @@ namespace SimpleTextEditor.Component
 
             return -1;
         }
+        #endregion
     }
 }

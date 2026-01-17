@@ -55,11 +55,6 @@ namespace SimpleTextEditor.Text
             public double VisualLineHeight;
 
             /// <summary>
-            /// Visual position of the element in UI coordinates
-            /// </summary>
-            public Point VisualElementPosition;
-
-            /// <summary>
             /// Desired total size of the output in UI coordinates
             /// </summary>
             public Size DesiredSize;
@@ -153,7 +148,6 @@ namespace SimpleTextEditor.Text
             //      - CharacterOffset         (from the text source)
             //      - ParagraphNumber         (from the text source - this is TBD)
             //      - VisualLineOffset        (from the visual text source)            
-            //      - VisualElementPosition   (UI position of the text element)
             //      - VisualLineHeight        (UI line height MSFT property)
             //      
             // 3) Check UI Overlap, or special conditions
@@ -208,7 +202,29 @@ namespace SimpleTextEditor.Text
         //
         private bool ProcessLineElement(SimpleTextStore textStore, TextLine textElement, MeasurementData measurementData)
         {
-            measurementData.LastLineBreak = textElement.GetTextLineBreak();
+            // Procedure:  How did the TextFormatter know where to put the element? Where is the "current" visual UI position?
+            //
+            // 1) Calculate this from the text element's bounding boxes for the text
+            // 2) Interpret the "line break" output of the formatter
+            // 3) Update the desired control height
+            //
+
+            //Rect? boundingBox = null;
+
+            // The indexed GlyphRun elements appear to be the final result
+            //
+            //foreach (var indexedGlyphRun in textElement.GetIndexedGlyphRuns())
+            //{
+            //    foreach (var textBounds in textElement.GetTextBounds(indexedGlyphRun.TextSourceCharacterIndex, indexedGlyphRun.TextSourceLength))
+            //    {
+            //        if (boundingBox == null)
+            //            boundingBox = textBounds.Rectangle;
+            //        else
+            //            boundingBox.Value.Union(textBounds.Rectangle);
+            //    }
+            //}
+
+            //measurementData.LastLineBreak = textElement.GetTextLineBreak();
 
             // Line Breaks are detected by the text store
             if (measurementData.LastLineBreak != null)
@@ -219,7 +235,6 @@ namespace SimpleTextEditor.Text
             // Text Height
             measurementData.DesiredSize.Height += textElement.TextHeight;
             measurementData.VisualLineHeight = textElement.TextHeight;
-            measurementData.VisualElementPosition.Y += textElement.TextHeight;                          // Advance Vertical Y-position
 
             // TextWidth:  (Line Break (?) (Not likely related to text-wrapping))
             if (textElement.WidthIncludingTrailingWhitespace > measurementData.DesiredSize.Width)
@@ -230,7 +245,6 @@ namespace SimpleTextEditor.Text
 
             // Visual Position
             measurementData.VisualLineOffset = 0;                                                       // Sets current visual line (visual line collection)
-            measurementData.VisualElementPosition.X += textElement.WidthIncludingTrailingWhitespace;    // Advances Horizontal X-Position
 
             // Create text position for the line
             var position = measurementData.CreateTextPosition();
@@ -256,8 +270,8 @@ namespace SimpleTextEditor.Text
             if (measurementData.VisualLineHeight == 0)
                 measurementData.VisualLineHeight = _formatter.FormatLine(_emptyTextStore, 0, constraint.Width, GetCurrentParagraphProperties(), null).TextHeight;
 
-            measurementData.CaretBounds.X = measurementData.VisualElementPosition.X;
-            measurementData.CaretBounds.Y = Math.Max(measurementData.VisualElementPosition.Y - measurementData.VisualLineHeight, 0);
+            measurementData.CaretBounds.X = 0;
+            measurementData.CaretBounds.Y = 0;
             measurementData.CaretBounds.Width = 2;
             measurementData.CaretBounds.Height = measurementData.VisualLineHeight;
         }
