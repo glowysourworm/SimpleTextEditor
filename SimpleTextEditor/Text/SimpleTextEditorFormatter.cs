@@ -3,7 +3,11 @@ using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Component;
+using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Visualization;
+
+using SimpleWpf.Extensions.Collection;
+using SimpleWpf.SimpleCollections.Collection;
 
 namespace SimpleTextEditor.Text
 {
@@ -82,13 +86,13 @@ namespace SimpleTextEditor.Text
             /// <summary>
             /// Measures element based on current input location. Does NOT advance parameters.
             /// </summary>
-            public Rect MeasureElement(TextLine textElement)
+            public Rect MeasureElement(FormattedText textElement)
             {
                 // The only way to know if there's an X offset is to get the SimpleTextStore to return it to you with the
                 // TextRun instance. There should be data in this TextLine; but I haven't seen any circumstance where this
                 // isn't a "line" of text by itself.
                 //
-                return new Rect(0, (this.VisualLineNumber - 1) * textElement.TextHeight, textElement.Width, textElement.Height);
+                return new Rect(0, (this.VisualLineNumber) * textElement.Height, textElement.Width, textElement.Height);
             }
 
             /// <summary>
@@ -96,11 +100,11 @@ namespace SimpleTextEditor.Text
             /// </summary>
             public void CommitElement(SimpleTextElement nextElement)
             {
-                this.DesiredHeight += nextElement.Element.TextHeight;
+                this.DesiredHeight += nextElement.Element.Height;
                 this.VisualLineNumber++;
 
                 // Text Height
-                this.VisualLineHeight = nextElement.Element.TextHeight;
+                this.VisualLineHeight = nextElement.Element.Height;
 
                 // TextWidth:  (Line Break (?) (Not likely related to text-wrapping))
                 if (nextElement.Element.WidthIncludingTrailingWhitespace > this.DesiredWidth)
@@ -115,18 +119,18 @@ namespace SimpleTextEditor.Text
             /// <summary>
             /// Builds element and calculates from current variables (does not update measurement data)
             /// </summary>
-            public SimpleTextElement BuildElement(Rect visualBounds, TextLine textElement, string cachedText, SimpleTextRunProperties properties)
+            public SimpleTextElement BuildElement(Rect visualBounds, FormattedText textElement, string cachedText, SimpleTextRunProperties properties)
             {
                 var desiredHeight = this.DesiredHeight;
                 var desiredWidth = textElement.WidthIncludingTrailingWhitespace;
                 var visualLineNumber = this.VisualLineNumber;
-                var characterOffset = this.CharacterOffset + textElement.Length;
+                var characterOffset = this.CharacterOffset;
 
                 // Line Breaks are detected by the text store
                 //if (this.LastLineBreak != null)
                 {
                     // Text Height
-                    desiredHeight += textElement.TextHeight;       // Increments Desired Height
+                    desiredHeight += textElement.Height;       // Increments Desired Height
 
                     // Visual Position
                     visualLineNumber++;                            // Sets current visual line (visual line collection)
@@ -158,7 +162,8 @@ namespace SimpleTextEditor.Text
         /// <param name="removalLength">removal length</param>
         public void UpdateCache(int offset, int additionLength, int removalLength)
         {
-            _textRunCache.Change(offset, additionLength, removalLength);
+            _textRunCache.Invalidate();
+            //_textRunCache.Change(offset, additionLength, removalLength);
         }
 
         /// <summary>
@@ -201,14 +206,74 @@ namespace SimpleTextEditor.Text
 
             var measurementData = new MeasurementData();
 
-            var properties = _visualInputData.GetParagraphProperties(TextPropertySet.Normal);
+            // Ranges with alternate properties
+            var propertyRanges = _textStore.GetPropertySlices();
 
-            // Format each line of text from the text store and draw it. EOL character requires the extra <= pass
-            // (I think) which accounts for the extra "character"
-            //
-            while (measurementData.CharacterOffset <= _textStore.GetLength())
+            // Text Lines
+            var textLines = _textStore.Get().Split('\r');
+
+            foreach (var textLine in textLines)
+            {
+                var currentLine = new string(textLine);
+                var currentText = new SimpleDictionary<IndexRange, FormattedText>();
+                var alternateOverlaps = new List<IndexRange>();
+                var currentRange = IndexRange.FromStartCount(measurementData.CharacterOffset, textLine.Length);
+
+                // Alternate Properties
+                foreach (var range in propertyRanges)
+                {
+                    var overlap = range.GetOverlap(measurementData.CharacterOffset, measurementData.CharacterOffset + textLine.Length);
+
+                    // Found Sub-Section w/ Alternate Properties
+                    //
+                    if (overlap != null)
+                        alternateOverlaps.Add(overlap);
+                }
+
+                // Alternate Text
+                if (alternateOverlaps.Count > 0)
+                {
+                    var startIndexes = alternateOverlaps.Select(x => x.StartIndex).ToList();
+                    var endIndexes = alternateOverlaps.Select(x => x.EndIndex).ToList();
+                    var splitIndices = startIndexes.Concat(endIndexes)
+                                                   .Where(x => x > currentRange.StartIndex)         // Must split before the character
+                                                   .Order()                                         // Must order split indices
+                                                   .ToArray();
+
+                    // Alternate Property Indices
+                    var splits = currentRange.Split(splitIndices);
+
+                    foreach (var range in splits)
+                    {
+                        var length = 0;
+                        var properties = _textStore.GetProperties(range.StartIndex, out length);
+
+                        // Create Formatted Text
+                        currentText.Add(range, CreateFormattedText(currentLine.Substring(range.StartIndex, range.Count), properties));
+                    }
+                }
+
+                // Default Text
+                else
+                {
+                    currentText.Add(currentRange, CreateFormattedText(currentLine, _visualInputData.GetProperties(TextPropertySet.Normal)));
+                }
+
+                // Process Elements
+                foreach (var pair in currentText)
+                {
+                    // Process First Pass
+                    var nextElement = ProcessLineElement(_textStore, pair.Value, measurementData);
+
+                    measurementData.CommitElement(nextElement);
+                }
+            }
+            /*
+            while (measurementData.CharacterOffset < _textStore.GetLength())
             {
                 TextLineBreak? lastLineBreak = null;
+
+
 
                 // First Pass Measurement
                 //
@@ -236,6 +301,7 @@ namespace SimpleTextEditor.Text
 
                 measurementData.CommitElement(nextElement);
             }
+            */
 
             return new SimpleTextVisualOutputData(measurementData.VisualElements,
                                                   constraint,
@@ -243,6 +309,50 @@ namespace SimpleTextEditor.Text
                                                   _textStore.GetLength());
         }
 
+        // Completes the measurement process by calculating the caret bounds
+        public Rect CalculateCaretBounds(SimpleTextVisualOutputData lastOutput, Size constraint)
+        {
+            var lineHeight = lastOutput.VisualElements.Max(x => x.Element.Height);
+
+            // Measure Caret while we're here (check for empty text)
+            if (lineHeight == 0)
+                return Rect.Empty;
+
+            // This is AHEAD BY ONE!
+            var caretPosition = _textStore.GetCaretPosition();
+            var result = new Rect();
+
+            foreach (var element in lastOutput.VisualElements)
+            {
+                if (element.Position.SourceOffset < caretPosition &&
+                    element.Position.SourceOffset + element.Length >= caretPosition)
+                {
+
+                }
+            }
+
+            // These glyphs trap the caret
+            //if (element != null)
+            //{
+            //    var textWidths = element.Element.GetMaxTextWidths();
+
+            //    // Add offset for the caret based on this bounding box + text widths
+            //    result.X = element.Position.VisualBounds.Location.X + textWidths[caretPosition - element.Position.SourceOffset];
+            //    result.Y = (element.Position.VisualLineNumber - 1) * element.Element.Height;
+            //    result.Width = 2;
+            //    result.Height = element.Element.Height;
+            //}
+            if (result == Rect.Empty)
+            {
+                result.X = 0;
+                result.Y = lineHeight * (lastOutput.VisualElements.Count() - 1);
+                result.Width = 2;
+                result.Height = lineHeight;
+            }
+
+            return result;
+        }
+        /*
         // Completes the measurement process by calculating the caret bounds
         public Rect CalculateCaretBounds(SimpleTextVisualOutputData lastOutput, Size constraint)
         {
@@ -284,7 +394,8 @@ namespace SimpleTextEditor.Text
 
             return result;
         }
-
+        */
+        /*
         // Processes current formatted text; and sets MeasurementData accordingly. Returns false if there is another pass needed (this indicates
         // UI overlap).
         //
@@ -307,6 +418,44 @@ namespace SimpleTextEditor.Text
                                                            _visualInputData.GetProperties(TextPropertySet.Normal));
 
             return nextElement;
+        }
+        */
+
+        // Processes current formatted text; and sets MeasurementData accordingly. Returns false if there is another pass needed (this indicates
+        // UI overlap).
+        //
+        private SimpleTextElement ProcessLineElement(SimpleTextStore textStore, FormattedText textElement, MeasurementData measurementData)
+        {
+            // Procedure:  How did the TextFormatter know where to put the element? Where is the "current" visual UI position?
+            //
+            // 1) Calculate this from the text element's bounding boxes for the text
+            // 2) Interpret the "line break" output of the formatter
+            // 3) Update the desired control height
+            //
+
+            // Set MeasurementData (updates all parameters, and returns the element's UI location)
+            var visualBounds = measurementData.MeasureElement(textElement);
+
+            // Add Next Element
+            var nextElement = measurementData.BuildElement(visualBounds,
+                                                           textElement,
+                                                           textStore.Get().GetSubString(measurementData.CharacterOffset, textElement.Text.Length - 1),
+                                                           _visualInputData.GetProperties(TextPropertySet.Normal));
+
+            return nextElement;
+        }
+
+        private FormattedText CreateFormattedText(string text, SimpleTextRunProperties properties)
+        {
+            return new FormattedText(text,
+                                        properties.CultureInfo,
+                                        FlowDirection.LeftToRight,
+                                        properties.Typeface,
+                                        properties.FontRenderingEmSize,
+                                        properties.ForegroundBrush,
+                                        new NumberSubstitution(NumberCultureSource.User, properties.CultureInfo, NumberSubstitutionMethod.AsCulture),
+                                        TextFormattingMode.Display,
+                                        properties.PixelsPerDip);
         }
     }
 }

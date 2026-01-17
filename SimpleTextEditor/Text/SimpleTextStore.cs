@@ -30,7 +30,7 @@ namespace SimpleTextEditor.Text
         public SimpleTextStore(SimpleTextVisualInputData visualInputData)
         {
             _visualInputData = visualInputData;
-            _textSource = new LinearTextSource();
+            _textSource = new LinearTextSource(visualInputData.GetProperties(TextPropertySet.Normal));
         }
 
         public TextEditorString Get()
@@ -44,16 +44,16 @@ namespace SimpleTextEditor.Text
         {
             return _textSource.GetLength();
         }
-        public void AppendText(string text, SimpleTextRunProperties properties)
+        public void AppendText(string text)
         {
-            _textSource.AppendText(text, properties);
+            _textSource.AppendText(text);
 
             SetCaretPosition(_textSource.GetLength() - 1);
         }
 
-        public void InsertText(int offset, string text, SimpleTextRunProperties properties)
+        public void InsertText(int offset, string text)
         {
-            _textSource.InsertText(offset, text, properties);
+            _textSource.InsertText(offset, text);
 
             SetCaretPosition(offset);
         }
@@ -63,9 +63,9 @@ namespace SimpleTextEditor.Text
 
             SetCaretPosition(offset);
         }
-        public void SetProperties(int offset, int count, SimpleTextRunProperties properties)
+        public void SetProperties(IndexRange range, SimpleTextRunProperties properties)
         {
-            _textSource.SetProperties(offset, count, properties);
+            _textSource.SetProperties(range, properties);
         }
 
         /// <summary>
@@ -92,7 +92,7 @@ namespace SimpleTextEditor.Text
         public override TextRun GetTextRun(int characterIndex)
         {
             // Make sure text source index is in bounds.
-            if (characterIndex < 0)
+            if (characterIndex < 0 || characterIndex >= _textSource.GetLength())
                 throw new ArgumentOutOfRangeException("characterIndex", "Value must be greater than 0.");
 
             // PERFORMANCE PROBLEM:  WE HAVE TO PRODUCE A TEXT MEASUREMENT TO SEE IF THE MOUSE
@@ -102,15 +102,15 @@ namespace SimpleTextEditor.Text
             //var formattedText = new FormattedText();
 
             // End of Line
-            if (_textSource.Search('\r', characterIndex) >= 0)
+            if (_textSource.Get().Get()[characterIndex] == '\r')
             {
-                return new TextEndOfLine(1);
+                return new TextEndOfLine(0);
             }
 
             // End of Paragraph
             if (characterIndex >= _textSource.GetLength())
             {
-                return new TextEndOfParagraph(1);
+                return new TextEndOfParagraph(0);
             }
 
             // PERFORMANCE!  This needs to be built into the text source. 
@@ -122,12 +122,19 @@ namespace SimpleTextEditor.Text
             // Create TextCharacters using the current font rendering properties.
             if (characterIndex < _textSource.GetLength())
             {
+                // Find property changes in the text
+                var propertyLength = 0;
+                var textProperties = _textSource.GetProperties(characterIndex, out propertyLength);
+
+                if (propertyLength < 0)
+                    propertyLength = _textSource.GetLength();
+
                 // Text Source returns a char[], which does not copy the source characters
                 //
                 return new TextCharacters(_textSource.Get().Get(),
                                           characterIndex,
-                                          _textSource.GetLength() - characterIndex,
-                                          _textSource.Get().GetProperties(characterIndex, _textSource.GetLength() - characterIndex));
+                                          propertyLength,
+                                          textProperties);
             }
 
             // Return an end-of-paragraph if no more text source.
@@ -150,6 +157,16 @@ namespace SimpleTextEditor.Text
         public int Search(char character, int startIndex)
         {
             throw new NotImplementedException();
+        }
+
+        public IndexRange[] GetPropertySlices()
+        {
+            return _textSource.GetPropertySlices();
+        }
+
+        public SimpleTextRunProperties GetProperties(int offset, out int length)
+        {
+            return _textSource.GetProperties(offset, out length);
         }
     }
 }

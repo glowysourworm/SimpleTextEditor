@@ -36,6 +36,11 @@ namespace SimpleTextEditor.Model
             return this.StartIndex <= otherRange.StartIndex && this.EndIndex >= otherRange.EndIndex;
         }
 
+        public bool Contains(int offset)
+        {
+            return this.StartIndex <= offset && this.EndIndex >= offset;
+        }
+
         public void Shift(int offset)
         {
             this.StartIndex += offset;
@@ -44,7 +49,7 @@ namespace SimpleTextEditor.Model
 
         public IndexRange[] Split(int offset)
         {
-            if (offset <= this.StartIndex ||
+            if (offset < this.StartIndex ||
                 offset > this.EndIndex)
                 throw new IndexOutOfRangeException("Must split IndexRange after the first index, and before or equal to the last");
 
@@ -52,6 +57,31 @@ namespace SimpleTextEditor.Model
             var range2 = IndexRange.FromIndices(offset, this.EndIndex);
 
             return new IndexRange[] { range1, range2 };
+        }
+
+        public IndexRange[] Split(params int[] offsets)
+        {
+            if (offsets.Length == 0)
+                throw new ArgumentException("Split must contain at least one offset");
+
+            var result = new List<IndexRange>();
+            var index = 0;
+
+            while (index < offsets.Length)
+            {
+                if (offsets[index] < this.StartIndex ||
+                    offsets[index] > this.EndIndex)
+                    throw new IndexOutOfRangeException("Must split IndexRange after the first index, and before or equal to the last");
+
+                var range = IndexRange.FromIndices(index == 0 ? this.StartIndex : offsets[index - 1], offsets[index] - 1);
+
+                result.Add(range);
+            }
+
+            // Final Split
+            result.Add(IndexRange.FromIndices(offsets[offsets.Length - 1], this.EndIndex));
+
+            return result.ToArray();
         }
 
         public IndexRange Add(int offset)
@@ -66,7 +96,7 @@ namespace SimpleTextEditor.Model
 
         public IndexRange? GetOverlap(int start, int end)
         {
-            if (end <= start)
+            if (end < start)
                 throw new ArgumentException("CharacterRange parameters must be in integer order");
 
             if (start < this.StartIndex)

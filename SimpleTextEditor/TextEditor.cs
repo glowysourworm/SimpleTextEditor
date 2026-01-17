@@ -2,7 +2,6 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Component;
 using SimpleTextEditor.Component.Interface;
@@ -269,10 +268,17 @@ namespace SimpleTextEditor
 
             foreach (var visualLine in _document.GetVisualElements())
             {
+                /*
                 position.X = visualLine.Element.Start + this.Padding.Left;
                 position.Y += visualLine.Element.TextHeight;
 
                 visualLine.Element.Draw(drawingContext, position, InvertAxes.None);
+                */
+
+                position.X = visualLine.Position.VisualBounds.X + this.Padding.Left;
+                position.Y = visualLine.Position.VisualBounds.Y + this.Padding.Top;
+
+                drawingContext.DrawText(visualLine.Element, visualLine.Position.VisualBounds.TopLeft);
             }
 
             if (caretBounds.Height > 0)

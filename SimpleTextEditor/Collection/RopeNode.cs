@@ -90,8 +90,8 @@ namespace SimpleTextEditor.Collection
                 // This will re-create the left / right nodes. The content text is split at this level; and
                 // all sub-nodes will re-initialize recursively.
                 //
-                _left = new RopeNode(new TextEditorString(contentParts[0], content.GetProperties(0, content.Length)));
-                _right = new RopeNode(new TextEditorString(contentParts[1], content.GetProperties(0, content.Length)));
+                _left = new RopeNode(new TextEditorString(contentParts[0]));
+                _right = new RopeNode(new TextEditorString(contentParts[1]));
             }
 
             // < Split Size
@@ -252,7 +252,7 @@ namespace SimpleTextEditor.Collection
             {
                 // Adjust index for right branch
                 _right.Append(content);
-                _content.Concat(content.Get(), content.GetProperties(0, content.Length));                     // Also, append it on our current node
+                _content.Concat(content.Get());                     // Also, append it on our current node
             }
 
             // Leaf
@@ -262,7 +262,7 @@ namespace SimpleTextEditor.Collection
                 if (_content.Length + content.Length >= SplitSize)
                 {
                     // Append (then pass into re-initialize)
-                    _content.Concat(content.Get(), content.GetProperties(0, content.Length));
+                    _content.Concat(content.Get());
 
                     // -> Rebalance() (resets root index)
                     ReInitialize(_content);
@@ -272,7 +272,7 @@ namespace SimpleTextEditor.Collection
                 else
                 {
                     // Nothing to change for this root index
-                    _content.Concat(content.Get(), content.GetProperties(0, content.Length));
+                    _content.Concat(content.Get());
                 }
             }
 
@@ -305,7 +305,7 @@ namespace SimpleTextEditor.Collection
             if (_left != null && offset < _left.Content.Length)
             {
                 _left.Insert(content, offset);
-                _content.Insert(content.Get(), offset, content.GetProperties(offset, content.Length));                     // Also, insert it on our current node
+                _content.Insert(content.Get(), offset);                                                         // Also, insert it on our current node
             }
 
             // -> Right
@@ -313,7 +313,7 @@ namespace SimpleTextEditor.Collection
             {
                 // Adjust index for right branch
                 _right.Insert(content, offset - _left.Content.Length);
-                _content.Insert(content.Get(), offset, content.GetProperties(offset, content.Length));                     // Also, insert it on our current node
+                _content.Insert(content.Get(), offset);                                                         // Also, insert it on our current node
             }
 
             // Leaf
@@ -323,7 +323,7 @@ namespace SimpleTextEditor.Collection
                 if (_content.Length + content.Length >= SplitSize)
                 {
                     // Insert (then pass into re-initialize)
-                    _content.Insert(content.Get(), offset, content.GetProperties(offset, content.Length));
+                    _content.Insert(content.Get(), offset);
 
                     // -> Rebalance() (resets root index)
                     ReInitialize(_content);
@@ -333,7 +333,7 @@ namespace SimpleTextEditor.Collection
                 else
                 {
                     // Nothing to change for this root index
-                    _content.Insert(content.Get(), offset, content.GetProperties(offset, content.Length));
+                    _content.Insert(content.Get(), offset);
                 }
             }
 

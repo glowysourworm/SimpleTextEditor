@@ -115,14 +115,16 @@ namespace SimpleTextEditor.Component
                 foreach (var element in _visualOutputData.VisualElements)
                 {
                     // Get Text Bounds: For this element (NOT SURE ABOUT POSITION!)
-                    var textBounds = element.Element.GetTextBounds(element.Position.SourceOffset, element.Length);
+                    //var textBounds = element.Element.GetTextBounds(element.Position.SourceOffset, element.Length);
 
-                    var index = textBounds.SelectMany(x => x.TextRunBounds)
-                                          .FirstOrDefault(x => x.Rectangle.Contains(pointUI))
-                                          ?.TextSourceCharacterIndex ?? -1;
+                    var textBounds = element.Position.VisualBounds;
 
-                    if (index != -1)
-                        return index;
+                    //var index = textBounds.SelectMany(x => x.TextRunBounds)
+                    //                      .FirstOrDefault(x => x.Rectangle.Contains(pointUI))
+                    //                      ?.TextSourceCharacterIndex ?? -1;
+
+                    if (textBounds.Contains(pointUI))
+                        return element.Position.SourceOffset;
                 }
             }
 

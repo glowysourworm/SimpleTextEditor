@@ -45,7 +45,7 @@ namespace SimpleTextEditor.Text
             var insertIndex = _textStore.GetLength();
 
             // Append to source
-            _textStore.AppendText(text, _visualInputData.GetProperties(TextPropertySet.Normal));
+            _textStore.AppendText(text);
 
             // Update TextRun Cache
             _formatter.UpdateCache(insertIndex, text.Length, -1);
@@ -72,7 +72,7 @@ namespace SimpleTextEditor.Text
         public void InsertText(int offset, string text)
         {
             // Insert
-            _textStore.InsertText(offset, text, _visualInputData.GetProperties(TextPropertySet.Normal));
+            _textStore.InsertText(offset, text);
 
             // Update TextRun Cache
             _formatter.UpdateCache(offset, text.Length, -1);
@@ -99,8 +99,10 @@ namespace SimpleTextEditor.Text
             return _textStore.Search(character, startIndex);
         }
 
-        public void SetMouseInfo(MouseData mouseData)
+        public bool SetMouseInfo(MouseData mouseData)
         {
+            var result = false;
+
             if (_lastVisualOutputData != null)
             {
                 foreach (var element in _lastVisualOutputData.VisualElements)
@@ -109,12 +111,22 @@ namespace SimpleTextEditor.Text
                     if (element.Position.VisualBounds.IntersectsWith(mouseData.SelectionBounds))
                     {
 
-                        _textStore.SetProperties(element.Position.SourceOffset,
-                                                 element.Length,
+                        _textStore.SetProperties(IndexRange.FromStartCount(element.Position.SourceOffset,
+                                                 element.Length),
                                                  _visualInputData.GetProperties(TextPropertySet.Highlighted));
+
+                        _formatter.InvalidateCache();
+
+                        result = true;
                     }
                 }
             }
+
+            // If it's still the first pass, then the measure will recreate the text runs anyway.
+            if (_lastVisualOutputData != null)
+                _lastVisualOutputData = _formatter.MeasureText(_lastVisualOutputData.ConstraintSize);
+
+            return result;
         }
     }
 }

@@ -12,9 +12,9 @@ namespace SimpleTextEditor.Text
             _rope = new Rope();
         }
 
-        public void AppendText(string text, SimpleTextRunProperties properties)
+        public void AppendText(string text)
         {
-            _rope.Append(text, properties);
+            _rope.Append(text);
         }
 
         public TextEditorString Get()
@@ -27,14 +27,9 @@ namespace SimpleTextEditor.Text
             return _rope.GetLength();
         }
 
-        public void InsertText(int offset, string text, SimpleTextRunProperties properties)
+        public void InsertText(int offset, string text)
         {
-            _rope.Insert(offset, text, properties);
-        }
-
-        public void SetProperties(int offset, int count, SimpleTextRunProperties properties)
-        {
-            throw new NotImplementedException();
+            _rope.Insert(offset, text);
         }
 
         public void RemoveText(int offset, int count)
@@ -48,6 +43,21 @@ namespace SimpleTextEditor.Text
         }
 
         public void SetMouseInfo(MouseData mouseData)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IndexRange[] GetPropertySlices()
+        {
+            throw new NotImplementedException();
+        }
+
+        public SimpleTextRunProperties GetProperties(int offset, out int length)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetProperties(IndexRange range, SimpleTextRunProperties properties)
         {
             throw new NotImplementedException();
         }

@@ -30,12 +30,11 @@ namespace SimpleTextEditor.Text.Interface
         SimpleTextVisualOutputData Measure(Size constraint);
 
         /// <summary>
-        /// Sets mouse information for text selection processing. The text run properties must be pre-set with mouse
-        /// selection properties (for the UI) during formatting. The Point objects may be null.
+        /// Sets mouse information for text selection processing. Returns true if text needs to be invalidated.
         /// </summary>
         /// <param name="topLeft">Top Left with respect to the TextEditor UI</param>
         /// <param name="bottomRight">Bottom Right with respect to the TextEditor UI</param>
         /// <param name="leftMouseButton">Left mouse button state</param>
-        void SetMouseInfo(MouseData mouseData);
+        bool SetMouseInfo(MouseData mouseData);
     }
 }

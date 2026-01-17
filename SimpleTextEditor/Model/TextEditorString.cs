@@ -1,10 +1,6 @@
 ﻿using System.Buffers;
 
 using SimpleTextEditor.Extension;
-using SimpleTextEditor.Text;
-
-using SimpleWpf.SimpleCollections.Collection;
-using SimpleWpf.SimpleCollections.Extension;
 
 namespace SimpleTextEditor.Model
 {
@@ -15,38 +11,31 @@ namespace SimpleTextEditor.Model
     public class TextEditorString
     {
         char[] _content;
-        SimpleDictionary<IndexRange, SimpleTextRunProperties> _propertiesDict;
 
         public int Length { get { return _content.Length; } }
 
         public TextEditorString()
         {
             _content = new char[0];
-            _propertiesDict = new SimpleDictionary<IndexRange, SimpleTextRunProperties>();
         }
-        public TextEditorString(char[] content, SimpleTextRunProperties properties)
+        public TextEditorString(char[] content)
         {
             _content = new char[content.Length];
-            _propertiesDict = new SimpleDictionary<IndexRange, SimpleTextRunProperties>();
 
-            Concat(content, properties);
+            Concat(content);
         }
 
-        public void Concat(char[] characters, SimpleTextRunProperties properties)
+        public void Concat(char[] characters)
         {
             var result = new char[_content.Length + characters.Length];
 
             Array.Copy(_content, 0, result, 0, _content.Length);
             Array.Copy(characters, 0, result, _content.Length, characters.Length);
 
-            // Properties
-            var indexRange = IndexRange.FromStartCount(_content.Length, characters.Length);
-            _propertiesDict.Add(indexRange, properties);
-
             _content = result;
         }
 
-        public void Insert(char[] characters, int insertIndex, SimpleTextRunProperties properties)
+        public void Insert(char[] characters, int insertIndex)
         {
             if (insertIndex < 0 || insertIndex >= _content.Length)
                 throw new ArgumentOutOfRangeException();
@@ -57,24 +46,6 @@ namespace SimpleTextEditor.Model
             Array.Copy(_content, 0, result, 0, insertIndex);
             Array.Copy(characters, 0, result, insertIndex, characters.Length);
             Array.Copy(_content, insertIndex, result, insertIndex + characters.Length, result.Length - characters.Length - insertIndex);
-
-            // Properties
-            var range = IndexRange.FromStartCount(_content.Length, characters.Length);
-
-            // Remove Affected Properties
-            var affectedProperties = _propertiesDict.Filter(x => x.Key.StartIndex >= range.StartIndex);
-
-            // Shift and re-insert (HASH CODES!)
-            foreach (var property in affectedProperties)
-            {
-                property.Key.Shift(characters.Length);
-
-                // Re-calculates hash code
-                _propertiesDict.Add(property.Key, property.Value);
-            }
-
-            // Add Next Properties
-            _propertiesDict.Add(range, properties);
 
             _content = result;
         }
@@ -95,50 +66,7 @@ namespace SimpleTextEditor.Model
             Array.Copy(_content, 0, result, 0, offset);
             Array.Copy(_content, offset + count, result, offset, _content.Length - offset - count);
 
-            // Properties
-            var range = IndexRange.FromStartCount(offset, count);
-
-            // Remove Affected Properties
-            var affectedProperties = _propertiesDict.Filter(x => range.Contains(x.Key));
-
             _content = result;
-        }
-
-        public void SetProperties(int offset, int count, SimpleTextRunProperties properties)
-        {
-            // Properties
-            var range = IndexRange.FromStartCount(offset, count);
-
-            // Affected Properties
-            var affectedProperties = _propertiesDict.Filter(x => range.GetOverlap(x.Key) != null);
-
-            foreach (var property in affectedProperties)
-            {
-                if (range.Contains(property.Key))
-                    continue;
-
-                // Create two ranges to fix the range dictionary
-                else
-                {
-                    var ranges = property.Key.Split(offset);
-
-                    if (ranges[0].StartIndex < range.StartIndex)
-                    {
-                        _propertiesDict.Add(ranges[0], property.Value);
-                        _propertiesDict.Add(ranges[1], properties);
-                    }
-                    else if (ranges[1].EndIndex > range.EndIndex)
-                    {
-                        _propertiesDict.Add(ranges[0], properties);
-                        _propertiesDict.Add(ranges[1], property.Value);
-                    }
-                    else
-                        throw new Exception("Improperly handled IndexRange split");
-                }
-            }
-
-            // Finally, add the new properties and range
-            _propertiesDict.Add(range, properties);
         }
 
         public IEnumerable<StringLocator> GetWhiteSpaces(bool includeSingleWhiteSpace)
@@ -171,22 +99,18 @@ namespace SimpleTextEditor.Model
                 if (_content[index] == character && nextString.Length > 0)
                 {
                     result.Add(nextString.ToArray());
+
+                    // Reset
+                    nextString = string.Empty;
                 }
                 else
-                    nextString = string.Concat(nextString, character);
+                    nextString = string.Concat(nextString, _content[index]);
             }
 
             if (nextString.Length > 0)
                 result.Add(nextString.ToArray());
 
             return result;
-        }
-
-        public SimpleTextRunProperties GetProperties(int offset, int count)
-        {
-            var range = IndexRange.FromStartCount(offset, count);
-
-            return _propertiesDict[range];
         }
 
         public string GetString()
@@ -208,7 +132,7 @@ namespace SimpleTextEditor.Model
             return _content;
         }
 
-        public static TextEditorString From(SimpleTextRunProperties properties, params char[][] otherArrays)
+        public static TextEditorString From(params char[][] otherArrays)
         {
             var length = otherArrays.Sum(x => x.Length);
             var result = new char[length];
@@ -223,7 +147,7 @@ namespace SimpleTextEditor.Model
                 insertIndex += otherArrays[index].Length;
             }
 
-            return new TextEditorString(result, properties);
+            return new TextEditorString(result);
         }
 
         public static TextEditorString From(params TextEditorString[] otherInstances)
@@ -232,7 +156,7 @@ namespace SimpleTextEditor.Model
 
             foreach (var instance in otherInstances)
             {
-                result.Concat(instance.Get(), instance.GetProperties(0, instance.Length));
+                result.Concat(instance.Get());
             }
 
             return result;
