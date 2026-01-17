@@ -15,6 +15,9 @@ namespace SimpleTextEditor.Text
         // Visual data
         SimpleTextVisualInputData _visualInputData;
 
+        // Visual Output Data (last)
+        SimpleTextVisualOutputData? _lastVisualOutputData;
+
         // Primary text store
         SimpleTextStore _textStore;
 
@@ -32,6 +35,8 @@ namespace SimpleTextEditor.Text
             _visualInputData = new SimpleTextVisualInputData(fontFamily, fontSize, foreground, background, highlightForeground, highlightBackground, textWrapping);
             _textStore = new SimpleTextStore(_visualInputData);
             _formatter = new SimpleTextEditorFormatter(_textStore, _visualInputData);
+
+            _lastVisualOutputData = null;
         }
 
         public void AppendText(string text)
@@ -44,6 +49,14 @@ namespace SimpleTextEditor.Text
 
             // Update TextRun Cache
             _formatter.UpdateCache(insertIndex, text.Length, -1);
+        }
+
+        public Rect GetCaretBounds()
+        {
+            if (_lastVisualOutputData == null)
+                return new Rect();
+
+            return _formatter.CalculateCaretBounds(_lastVisualOutputData, _lastVisualOutputData.ConstraintSize);
         }
 
         public string GetTextCopy()
@@ -67,7 +80,9 @@ namespace SimpleTextEditor.Text
 
         public SimpleTextVisualOutputData Measure(Size constraint)
         {
-            return _formatter.MeasureText(constraint);
+            _lastVisualOutputData = _formatter.MeasureText(constraint);
+
+            return _lastVisualOutputData;
         }
 
         public void RemoveText(int offset, int count)

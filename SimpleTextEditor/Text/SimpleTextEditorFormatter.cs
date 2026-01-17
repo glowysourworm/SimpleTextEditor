@@ -34,60 +34,124 @@ namespace SimpleTextEditor.Text
         // Class for handling measurement pass
         protected class MeasurementData
         {
+            List<SimpleTextElement> _visualElements;
+
             /// <summary>
             /// Absolute text source offset for the character
             /// </summary>
-            public int CharacterOffset;
+            public int CharacterOffset { get; private set; }
 
             /// <summary>
             /// Current visual line offset for the current element. (This will index into the visual lines collection)
             /// </summary>
-            public int VisualLineOffset;
+            public int VisualLineNumber { get; private set; }
 
             /// <summary>
             /// Current paragraph number for the current element
             /// </summary>
-            public int ParagraphNumber;
+            public int ParagraphNumber { get; private set; }
 
             /// <summary>
             /// Visual line height (MSFT typography metric)
             /// </summary>
-            public double VisualLineHeight;
+            public double VisualLineHeight { get; private set; }
 
             /// <summary>
-            /// Desired total size of the output in UI coordinates
+            /// Desired total width of the output in UI coordinates
             /// </summary>
-            public Size DesiredSize;
+            public double DesiredWidth { get; private set; }
 
             /// <summary>
-            /// Desired UI size of the caret - given its current offset in
-            /// the text source.
+            /// Desired total height of the output in UI coordinates
             /// </summary>
-            public Rect CaretBounds;
+            public double DesiredHeight { get; private set; }
 
             /// <summary>
             /// Last line break found by the formatter. This should be related to text wrapping. But, there could
             /// be other implied meanings from MSFT.
             /// </summary>
-            public TextLineBreak? LastLineBreak;
+            public TextLineBreak? LastLineBreak { get; private set; }
 
             /// <summary>
             /// Primary output of a measurement pass
             /// </summary>
-            public List<SimpleTextElement> VisualElements;
-
-            /// <summary>
-            /// Builds a text position instance from the current data
-            /// </summary>
-            public TextPosition CreateTextPosition()
-            {
-                return new TextPosition(this.CharacterOffset, this.VisualLineOffset + 1, 0, this.VisualLineOffset + 1, this.ParagraphNumber);
-            }
+            public IEnumerable<SimpleTextElement> VisualElements { get { return _visualElements; } }
 
             public MeasurementData()
             {
-                this.VisualElements = new List<SimpleTextElement>();
+                _visualElements = new List<SimpleTextElement>();
                 this.LastLineBreak = null;
+            }
+
+            /// <summary>
+            /// Adds elements and updates data
+            /// </summary>
+            public Point MeasureElement(TextLine textElement)
+            {
+                Rect? boundingBox = null;
+
+                // The indexed GlyphRun elements appear to be the final result
+                foreach (var indexedGlyphRun in textElement.GetIndexedGlyphRuns())
+                {
+                    // Build Geometry
+                    //var geometry = indexedGlyphRun.GlyphRun.BuildGeometry();
+
+
+
+                    foreach (var textBounds in textElement.GetTextBounds(indexedGlyphRun.TextSourceCharacterIndex, indexedGlyphRun.TextSourceLength))
+                    {
+                        if (boundingBox == null)
+                            boundingBox = textBounds.Rectangle;
+                        else
+                            boundingBox.Value.Union(textBounds.Rectangle);
+                    }
+
+                    //if (boundingBox == null)
+                    //    boundingBox = geometry.Bounds;
+
+                    //else
+                    //    boundingBox.Value.Union(geometry.Bounds);
+                }
+
+                return boundingBox?.Location ?? new Point();
+            }
+
+            /// <summary>
+            /// Adds measured element to the data output; and updates variables
+            /// </summary>
+            public void AddElement(Point location, TextLine textElement, string cachedText, SimpleTextRunProperties properties)
+            {
+                // NEED BETTER WAY TO HANDLE LINES!
+                //var lineBreak = cachedText.Any(x => x == '\r') || textElement.Length == cachedText.Length;
+
+                //measurementData.LastLineBreak = textElement.GetTextLineBreak();
+
+                // Line Breaks are detected by the text store
+                //if (this.LastLineBreak != null)
+                {
+                    // Text Height
+                    this.DesiredHeight += textElement.TextHeight;       // Increments Desired Height
+
+                    // Visual Position
+                    this.VisualLineNumber++;                            // Sets current visual line (visual line collection)
+                }
+
+                // Text Height
+                this.VisualLineHeight = textElement.TextHeight;
+
+                // TextWidth:  (Line Break (?) (Not likely related to text-wrapping))
+                if (textElement.WidthIncludingTrailingWhitespace > this.DesiredWidth)
+                    this.DesiredWidth = textElement.WidthIncludingTrailingWhitespace;
+
+                // Character Offset
+                this.CharacterOffset += textElement.Length;                                      // Advance Character Offset (text source)
+
+                var textPosition = new TextElementPosition(location, this.CharacterOffset, 0, 0, this.VisualLineNumber, 0);
+
+                // Use these to render w/o re-formatting (NOTE*** THE TEXTLINE IS RECEIVING AN EXTRA CHARACTER?!)
+                var nextElement = new SimpleTextElement(textElement, textPosition, properties, cachedText);
+
+                _visualElements.Add(nextElement);
             }
         }
 
@@ -187,14 +251,52 @@ namespace SimpleTextEditor.Text
                 }
             }
 
-            // Measure Caret
-            ProcessCaretMeasurement(measurementData, constraint);
-
             return new SimpleTextVisualOutputData(measurementData.VisualElements,
                                                   constraint,
-                                                  measurementData.DesiredSize,
-                                                  measurementData.CaretBounds,
+                                                  new Size(measurementData.DesiredWidth, measurementData.DesiredHeight),
                                                   _textStore.GetLength());
+        }
+
+        // Completes the measurement process by calculating the caret bounds
+        public Rect CalculateCaretBounds(SimpleTextVisualOutputData lastOutput, Size constraint)
+        {
+            var lineHeight = lastOutput.VisualElements.Max(x => x.Element.TextHeight);
+
+            // Measure Caret while we're here (check for empty text)
+            if (lineHeight == 0)
+                return Rect.Empty;
+
+            // This is AHEAD BY ONE!
+            var caretPosition = _textStore.GetCaretPosition();
+            var result = new Rect();
+
+            // Need to locate the glyph run boxes where the caret position lies
+            foreach (var textElement in lastOutput.VisualElements)
+            {
+                var glyphRuns = textElement.Element
+                                           .GetIndexedGlyphRuns()
+                                           .Where(x => x.TextSourceCharacterIndex < caretPosition &&
+                                                       x.TextSourceCharacterIndex + x.TextSourceLength >= caretPosition);
+
+                // These glyphs trap the caret
+                foreach (var glyphRun in glyphRuns)
+                {
+                    result.X = Math.Max(result.X, textElement.Position.VisualPosition.X + textElement.Element.WidthIncludingTrailingWhitespace);
+                    result.Y = (textElement.Position.VisualLineNumber - 1) * textElement.Element.TextHeight;
+                    result.Width = 2;
+                    result.Height = textElement.Element.TextHeight;
+                }
+            }
+
+            if (result == Rect.Empty)
+            {
+                result.X = 0;
+                result.Y = lineHeight * (lastOutput.VisualElements.Count() - 1);
+                result.Width = 2;
+                result.Height = lineHeight;
+            }
+
+            return result;
         }
 
         // Processes current formatted text; and sets MeasurementData accordingly. Returns false if there is another pass needed (this indicates
@@ -209,71 +311,16 @@ namespace SimpleTextEditor.Text
             // 3) Update the desired control height
             //
 
-            //Rect? boundingBox = null;
-
-            // The indexed GlyphRun elements appear to be the final result
-            //
-            //foreach (var indexedGlyphRun in textElement.GetIndexedGlyphRuns())
-            //{
-            //    foreach (var textBounds in textElement.GetTextBounds(indexedGlyphRun.TextSourceCharacterIndex, indexedGlyphRun.TextSourceLength))
-            //    {
-            //        if (boundingBox == null)
-            //            boundingBox = textBounds.Rectangle;
-            //        else
-            //            boundingBox.Value.Union(textBounds.Rectangle);
-            //    }
-            //}
-
-            //measurementData.LastLineBreak = textElement.GetTextLineBreak();
-
-            // Line Breaks are detected by the text store
-            if (measurementData.LastLineBreak != null)
-            {
-                // Update the line position coordinate for the displayed line.
-            }
-
-            // Text Height
-            measurementData.DesiredSize.Height += textElement.TextHeight;
-            measurementData.VisualLineHeight = textElement.TextHeight;
-
-            // TextWidth:  (Line Break (?) (Not likely related to text-wrapping))
-            if (textElement.WidthIncludingTrailingWhitespace > measurementData.DesiredSize.Width)
-                measurementData.DesiredSize.Width = textElement.WidthIncludingTrailingWhitespace;
-
-            // Character Offset
-            measurementData.CharacterOffset += textElement.Length;                                      // Advance Character Offset (text source)
-
-            // Visual Position
-            measurementData.VisualLineOffset = 0;                                                       // Sets current visual line (visual line collection)
-
-            // Create text position for the line
-            var position = measurementData.CreateTextPosition();
-            var propertySet = textStore.GetCurrentTextProperties();
-            var textProperties = _visualInputData.GetProperties(propertySet);
-
-            // Use these to render w/o re-formatting (NOTE*** THE TEXTLINE IS RECEIVING AN EXTRA CHARACTER?!)
-            var nextElement = new SimpleTextElement(textElement,
-                                                    position,
-                                                    textProperties,
-                                                    textStore.Get().GetSubString(measurementData.CharacterOffset - textElement.Length, textElement.Length - 1));
+            // Set MeasurementData (updates all parameters, and returns the element's UI location)
+            var location = measurementData.MeasureElement(textElement);
 
             // Add Next Element
-            measurementData.VisualElements.Add(nextElement);
+            measurementData.AddElement(location,
+                                       textElement,
+                                       textStore.Get().GetSubString(measurementData.CharacterOffset, textElement.Length - 1),
+                                       GetCurrentTextProperties());
 
             return true;
-        }
-
-        // Completes the measurement process by calculating the caret bounds
-        private void ProcessCaretMeasurement(MeasurementData measurementData, Size constraint)
-        {
-            // Measure Caret while we're here (check for empty text)
-            if (measurementData.VisualLineHeight == 0)
-                measurementData.VisualLineHeight = _formatter.FormatLine(_emptyTextStore, 0, constraint.Width, GetCurrentParagraphProperties(), null).TextHeight;
-
-            measurementData.CaretBounds.X = 0;
-            measurementData.CaretBounds.Y = 0;
-            measurementData.CaretBounds.Width = 2;
-            measurementData.CaretBounds.Height = measurementData.VisualLineHeight;
         }
 
         private SimpleTextRunProperties GetCurrentTextProperties()

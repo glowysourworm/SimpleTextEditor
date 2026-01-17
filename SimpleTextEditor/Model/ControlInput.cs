@@ -6,15 +6,20 @@
     /// </summary>
     public enum ControlInput
     {
-        ArrowUp,
-        ArrowDown,
-        ArrowLeft,
-        ArrowRight,
+        None,
+        Backspace,
+        DeleteCurrentCharacter,         // Using delete key in place
+        LineUp,
+        LineDown,
+        CharacterLeft,
+        CharacterRight,
         WordLeft,
         WordRight,
         EndOfLine,
         BeginningOfLine,
         PageUp,
-        PageDown
+        PageDown,
+        EndOfDocument,
+        BeginningOfDocument
     }
 }

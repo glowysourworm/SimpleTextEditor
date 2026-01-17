@@ -14,7 +14,7 @@ namespace SimpleTextEditor.Text.Visualization
         TextLine _textElement;
 
         // Position of the line (source and visual) (also has line data)
-        ITextPosition _position;
+        ITextElementPosition _position;
 
         // Shared paragraph properties
         //SimpleTextParagraphProperties _properties;
@@ -24,11 +24,11 @@ namespace SimpleTextEditor.Text.Visualization
         string _cachedOutput;
 
         public TextLine Element { get { return _textElement; } }
-        public ITextPosition Position { get { return _position; } }
+        public ITextElementPosition Position { get { return _position; } }
         public int Length { get { return _textElement.Length; } }
         public SimpleTextRunProperties Properties { get { return _properties; } }
 
-        public SimpleTextElement(TextLine textElement, ITextPosition position, SimpleTextRunProperties properties, string cachedOutput)
+        public SimpleTextElement(TextLine textElement, ITextElementPosition position, SimpleTextRunProperties properties, string cachedOutput)
         {
             _textElement = textElement;
             _position = position;

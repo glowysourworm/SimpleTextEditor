@@ -20,6 +20,11 @@ namespace SimpleTextEditor.Text.Interface
         int SearchText(char character, int startIndex);
 
         /// <summary>
+        /// Returns the current caret render bounds - calculated by the visual core's formatter
+        /// </summary>
+        Rect GetCaretBounds();
+
+        /// <summary>
         /// Measure override for WPF controls. Returns output data for rendering, using the provided control constraint.
         /// </summary>
         SimpleTextVisualOutputData Measure(Size constraint);

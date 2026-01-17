@@ -6,6 +6,7 @@ using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Component;
 using SimpleTextEditor.Component.Interface;
+using SimpleTextEditor.Model;
 
 namespace SimpleTextEditor
 {
@@ -127,10 +128,41 @@ namespace SimpleTextEditor
 
             base.OnKeyDown(e);
 
-            if (e.Key == Key.Back && _document.TextLength > 0)
-            {
-                _document.ProcessRemoveText(_document.TextLength - 1, 1);
+            var controlInput = ControlInputFactory.Convert(e.Key);
 
+            // Must Handle Event (if it was meant for the IDocument)
+            if (_document == null && controlInput != ControlInput.None)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            switch (controlInput)
+            {
+                case ControlInput.None:
+                    break;
+                case ControlInput.Backspace:
+                    _document.ProcessRemoveText(_document.TextLength - 1, 1);
+                    break;
+                case ControlInput.BeginningOfDocument:
+                case ControlInput.BeginningOfLine:
+                case ControlInput.CharacterLeft:
+                case ControlInput.CharacterRight:
+                case ControlInput.DeleteCurrentCharacter:
+                case ControlInput.EndOfDocument:
+                case ControlInput.EndOfLine:
+                case ControlInput.LineDown:
+                case ControlInput.LineUp:
+                case ControlInput.PageDown:
+                case ControlInput.PageUp:
+                case ControlInput.WordLeft:
+                case ControlInput.WordRight:
+                default:
+                    throw new Exception("Unhandled ControlInput");
+            }
+
+            if (controlInput != ControlInput.None)
+            {
                 e.Handled = true;
 
                 InvalidateMeasure();

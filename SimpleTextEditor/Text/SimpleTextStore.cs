@@ -27,6 +27,10 @@ namespace SimpleTextEditor.Text
         // Mouse Interaction Data
         private MouseData _mouseData;
 
+        // Keeps track of caret position (this will be the character AFTER to caret rendering). The last
+        // position is off the end of the text source by one.
+        private int _caretPosition;
+
         public SimpleTextStore(SimpleTextVisualInputData visualInputData)
         {
             _visualInputData = visualInputData;
@@ -49,14 +53,38 @@ namespace SimpleTextEditor.Text
         public void AppendText(string text)
         {
             _textSource.AppendText(text);
+
+            SetCaretPosition(_textSource.GetLength() - 1);
         }
         public void InsertText(int offset, string text)
         {
             _textSource.InsertText(offset, text);
+
+            SetCaretPosition(offset);
         }
         public void RemoveText(int offset, int count)
         {
             _textSource.RemoveText(offset, count);
+
+            SetCaretPosition(offset);
+        }
+
+        /// <summary>
+        /// Gets the position of the caret. The final caret position is off the end 
+        /// of the text by one.
+        /// </summary>
+        public int GetCaretPosition()
+        {
+            return _caretPosition;
+        }
+
+        /// <summary>
+        /// Sets the caret position based on text offset. The final caret position is off the
+        /// end of the text by one
+        /// </summary>
+        public void SetCaretPosition(int textOffset)
+        {
+            _caretPosition = textOffset + 1;
         }
 
         /// <summary>

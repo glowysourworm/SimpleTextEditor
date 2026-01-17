@@ -51,7 +51,7 @@ namespace SimpleTextEditor.Component
         }
         public Rect GetCaretBounds()
         {
-            return new Rect();
+            return _visualCore.GetCaretBounds();
         }
         public void ProcessUILeftClick(Point pointUI)
         {
@@ -61,13 +61,13 @@ namespace SimpleTextEditor.Component
         {
             switch (input)
             {
-                case ControlInput.ArrowUp:
+                case ControlInput.LineUp:
                     break;
-                case ControlInput.ArrowDown:
+                case ControlInput.LineDown:
                     break;
-                case ControlInput.ArrowLeft:
+                case ControlInput.CharacterLeft:
                     break;
-                case ControlInput.ArrowRight:
+                case ControlInput.CharacterRight:
                     break;
                 case ControlInput.WordLeft:
                     break;

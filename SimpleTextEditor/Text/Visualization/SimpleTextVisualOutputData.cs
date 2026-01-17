@@ -18,11 +18,6 @@ namespace SimpleTextEditor.Text.Visualization
         public Size DesiredSize { get; }
 
         /// <summary>
-        /// Desired render bounds for the caret
-        /// </summary>
-        public Rect CaretBounds { get; }
-
-        /// <summary>
         /// Length (in characters) of text output
         /// </summary>
         public int SourceLength { get; }
@@ -37,15 +32,13 @@ namespace SimpleTextEditor.Text.Visualization
         /// </summary>
         public IEnumerable<SimpleTextElement> VisualElements { get { return _visualElements; } }
 
-        public SimpleTextVisualOutputData(IEnumerable<SimpleTextElement> visualElements, Size constraint, Size desiredSize, Rect caretBounds, int sourceLength)
+        public SimpleTextVisualOutputData(IEnumerable<SimpleTextElement> visualElements, Size constraint, Size desiredSize, int sourceLength)
         {
             this.ConstraintSize = constraint;
             this.DesiredSize = desiredSize;
-            this.CaretBounds = caretBounds;
             this.SourceLength = sourceLength;
 
             _visualElements = new List<SimpleTextElement>(visualElements);
-
         }
 
         public SimpleTextElement GetElement(int index)
