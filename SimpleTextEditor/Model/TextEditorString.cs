@@ -104,6 +104,43 @@ namespace SimpleTextEditor.Model
             _content = result;
         }
 
+        public void SetProperties(int offset, int count, SimpleTextRunProperties properties)
+        {
+            // Properties
+            var range = IndexRange.FromStartCount(offset, count);
+
+            // Affected Properties
+            var affectedProperties = _propertiesDict.Filter(x => range.GetOverlap(x.Key) != null);
+
+            foreach (var property in affectedProperties)
+            {
+                if (range.Contains(property.Key))
+                    continue;
+
+                // Create two ranges to fix the range dictionary
+                else
+                {
+                    var ranges = property.Key.Split(offset);
+
+                    if (ranges[0].StartIndex < range.StartIndex)
+                    {
+                        _propertiesDict.Add(ranges[0], property.Value);
+                        _propertiesDict.Add(ranges[1], properties);
+                    }
+                    else if (ranges[1].EndIndex > range.EndIndex)
+                    {
+                        _propertiesDict.Add(ranges[0], properties);
+                        _propertiesDict.Add(ranges[1], property.Value);
+                    }
+                    else
+                        throw new Exception("Improperly handled IndexRange split");
+                }
+            }
+
+            // Finally, add the new properties and range
+            _propertiesDict.Add(range, properties);
+        }
+
         public IEnumerable<StringLocator> GetWhiteSpaces(bool includeSingleWhiteSpace)
         {
             return GetString().GetWhiteSpaces(includeSingleWhiteSpace);

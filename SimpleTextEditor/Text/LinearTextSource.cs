@@ -32,6 +32,11 @@ namespace SimpleTextEditor.Text
             _source.Insert(text.ToArray(), offset, properties);
         }
 
+        public void SetProperties(int offset, int count, SimpleTextRunProperties properties)
+        {
+            _source.SetProperties(offset, count, properties);
+        }
+
         public void RemoveText(int offset, int count)
         {
             _source.Remove(offset, count);

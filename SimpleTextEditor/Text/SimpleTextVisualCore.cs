@@ -101,8 +101,20 @@ namespace SimpleTextEditor.Text
 
         public void SetMouseInfo(MouseData mouseData)
         {
-            _formatter.SetMouseInfo(mouseData);
-            _textStore.SetMouseInfo(mouseData);
+            if (_lastVisualOutputData != null)
+            {
+                foreach (var element in _lastVisualOutputData.VisualElements)
+                {
+                    // Intersection
+                    if (element.Position.VisualBounds.IntersectsWith(mouseData.SelectionBounds))
+                    {
+
+                        _textStore.SetProperties(element.Position.SourceOffset,
+                                                 element.Length,
+                                                 _visualInputData.GetProperties(TextPropertySet.Highlighted));
+                    }
+                }
+            }
         }
     }
 }

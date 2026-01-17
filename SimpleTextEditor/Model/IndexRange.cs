@@ -42,6 +42,18 @@ namespace SimpleTextEditor.Model
             this.EndIndex += offset;
         }
 
+        public IndexRange[] Split(int offset)
+        {
+            if (offset <= this.StartIndex ||
+                offset > this.EndIndex)
+                throw new IndexOutOfRangeException("Must split IndexRange after the first index, and before or equal to the last");
+
+            var range1 = IndexRange.FromIndices(this.StartIndex, offset - 1);
+            var range2 = IndexRange.FromIndices(offset, this.EndIndex);
+
+            return new IndexRange[] { range1, range2 };
+        }
+
         public IndexRange Add(int offset)
         {
             return new IndexRange(this.StartIndex + offset, this.EndIndex + offset);

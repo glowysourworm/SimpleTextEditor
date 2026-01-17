@@ -22,10 +22,6 @@ namespace SimpleTextEditor.Text
 
         // Font Rendering Properties
         private SimpleTextVisualInputData _visualInputData;
-        private TextPropertySet _currentTextPropertySet;
-
-        // Mouse Interaction Data
-        private MouseData _mouseData;
 
         // Keeps track of caret position (this will be the character AFTER to caret rendering). The last
         // position is off the end of the text source by one.
@@ -34,9 +30,7 @@ namespace SimpleTextEditor.Text
         public SimpleTextStore(SimpleTextVisualInputData visualInputData)
         {
             _visualInputData = visualInputData;
-            _currentTextPropertySet = TextPropertySet.Normal;
             _textSource = new LinearTextSource();
-            _mouseData = new MouseData();
         }
 
         public TextEditorString Get()
@@ -69,9 +63,9 @@ namespace SimpleTextEditor.Text
 
             SetCaretPosition(offset);
         }
-        public void SetMouseInfo(MouseData mouseData)
+        public void SetProperties(int offset, int count, SimpleTextRunProperties properties)
         {
-            _mouseData = mouseData;
+            _textSource.SetProperties(offset, count, properties);
         }
 
         /// <summary>
@@ -128,11 +122,12 @@ namespace SimpleTextEditor.Text
             // Create TextCharacters using the current font rendering properties.
             if (characterIndex < _textSource.GetLength())
             {
-                // TextString.Get() returns a char[] for the text source w/o copying memory
+                // Text Source returns a char[], which does not copy the source characters
+                //
                 return new TextCharacters(_textSource.Get().Get(),
                                           characterIndex,
                                           _textSource.GetLength() - characterIndex,
-                                          _visualInputData.GetProperties(_currentTextPropertySet));
+                                          _textSource.Get().GetProperties(characterIndex, _textSource.GetLength() - characterIndex));
             }
 
             // Return an end-of-paragraph if no more text source.
@@ -155,19 +150,6 @@ namespace SimpleTextEditor.Text
         public int Search(char character, int startIndex)
         {
             throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Selects text properties for next draw pass. Requires that the formatter be invalidated.
-        /// </summary>
-        public void SelectTextProperties(TextPropertySet propertySet)
-        {
-            _currentTextPropertySet = propertySet;
-        }
-
-        public TextPropertySet GetCurrentTextProperties()
-        {
-            return _currentTextPropertySet;
         }
     }
 }

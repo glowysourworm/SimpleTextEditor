@@ -3,7 +3,6 @@ using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Component;
-using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Visualization;
 
 namespace SimpleTextEditor.Text
@@ -15,9 +14,6 @@ namespace SimpleTextEditor.Text
     {
         // (see MSFT Advanced Text Formatting)
         TextFormatter _formatter;
-
-        // Mouse data from the UI
-        MouseData _mouseData;
 
         // Input data to the formatter
         readonly SimpleTextVisualInputData _visualInputData;
@@ -151,7 +147,6 @@ namespace SimpleTextEditor.Text
             _emptyTextStore = new SimpleTextStore(visualInputData);
             _textStore = textStore;
             _textRunCache = new TextRunCache();
-            _mouseData = new MouseData();
         }
 
         /// <summary>
@@ -172,11 +167,6 @@ namespace SimpleTextEditor.Text
         public void InvalidateCache()
         {
             _textRunCache.Invalidate();
-        }
-
-        public void SetMouseInfo(MouseData mouseData)
-        {
-            _mouseData = mouseData;
         }
 
         public SimpleTextVisualOutputData MeasureText(Size constraint)
@@ -211,8 +201,7 @@ namespace SimpleTextEditor.Text
 
             var measurementData = new MeasurementData();
 
-            var propertySet = _textStore.GetCurrentTextProperties();
-            var properties = _visualInputData.GetParagraphProperties(propertySet);
+            var properties = _visualInputData.GetParagraphProperties(TextPropertySet.Normal);
 
             // Format each line of text from the text store and draw it. EOL character requires the extra <= pass
             // (I think) which accounts for the extra "character"
@@ -315,24 +304,9 @@ namespace SimpleTextEditor.Text
             var nextElement = measurementData.BuildElement(visualBounds,
                                                            textElement,
                                                            textStore.Get().GetSubString(measurementData.CharacterOffset, textElement.Length - 1),
-                                                           GetCurrentTextProperties());
+                                                           _visualInputData.GetProperties(TextPropertySet.Normal));
 
             return nextElement;
-        }
-
-        private SimpleTextRunProperties GetCurrentTextProperties()
-        {
-            var propertySet = _textStore.GetCurrentTextProperties();
-            var properties = _visualInputData.GetProperties(propertySet);
-
-            return properties;
-        }
-        private SimpleTextParagraphProperties GetCurrentParagraphProperties()
-        {
-            var propertySet = _textStore.GetCurrentTextProperties();
-            var properties = _visualInputData.GetParagraphProperties(propertySet);
-
-            return properties;
         }
     }
 }

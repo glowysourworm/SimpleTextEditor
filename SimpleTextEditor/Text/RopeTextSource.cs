@@ -32,6 +32,11 @@ namespace SimpleTextEditor.Text
             _rope.Insert(offset, text, properties);
         }
 
+        public void SetProperties(int offset, int count, SimpleTextRunProperties properties)
+        {
+            throw new NotImplementedException();
+        }
+
         public void RemoveText(int offset, int count)
         {
             _rope.Remove(offset, count);
