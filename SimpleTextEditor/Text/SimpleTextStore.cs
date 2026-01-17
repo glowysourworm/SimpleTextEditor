@@ -39,7 +39,7 @@ namespace SimpleTextEditor.Text
             _mouseData = new MouseData();
         }
 
-        public TextString Get()
+        public TextEditorString Get()
         {
             return _textSource.Get();
         }
@@ -50,15 +50,16 @@ namespace SimpleTextEditor.Text
         {
             return _textSource.GetLength();
         }
-        public void AppendText(string text)
+        public void AppendText(string text, SimpleTextRunProperties properties)
         {
-            _textSource.AppendText(text);
+            _textSource.AppendText(text, properties);
 
             SetCaretPosition(_textSource.GetLength() - 1);
         }
-        public void InsertText(int offset, string text)
+
+        public void InsertText(int offset, string text, SimpleTextRunProperties properties)
         {
-            _textSource.InsertText(offset, text);
+            _textSource.InsertText(offset, text, properties);
 
             SetCaretPosition(offset);
         }

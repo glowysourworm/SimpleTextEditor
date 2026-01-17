@@ -1,4 +1,6 @@
-﻿namespace SimpleTextEditor.Model
+﻿using SimpleWpf.RecursiveSerializer.Shared;
+
+namespace SimpleTextEditor.Model
 {
     public class IndexRange
     {
@@ -8,7 +10,7 @@
 
         private IndexRange(int startIndex, int endIndex)
         {
-            if (endIndex <= startIndex)
+            if (endIndex < startIndex)
                 throw new ArgumentException("CharacterRange parameters must be in integer order");
 
             this.StartIndex = startIndex;
@@ -27,6 +29,17 @@
         public IndexRange? GetOverlap(IndexRange otherRange)
         {
             return GetOverlap(otherRange.StartIndex, otherRange.EndIndex);
+        }
+
+        public bool Contains(IndexRange otherRange)
+        {
+            return this.StartIndex <= otherRange.StartIndex && this.EndIndex >= otherRange.EndIndex;
+        }
+
+        public void Shift(int offset)
+        {
+            this.StartIndex += offset;
+            this.EndIndex += offset;
         }
 
         public IndexRange Add(int offset)
@@ -60,6 +73,24 @@
             }
 
             return null;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj == null)
+                return false;
+
+            var range = obj as IndexRange;
+
+            if (range == null)
+                return false;
+
+            return range.StartIndex == this.StartIndex && range.EndIndex == this.EndIndex;
+        }
+
+        public override int GetHashCode()
+        {
+            return RecursiveSerializerHashGenerator.CreateSimpleHash(this.StartIndex, this.EndIndex);
         }
     }
 }

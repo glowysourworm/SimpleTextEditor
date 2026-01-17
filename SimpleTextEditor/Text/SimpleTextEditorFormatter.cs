@@ -234,16 +234,16 @@ namespace SimpleTextEditor.Text
                 var nextElement = ProcessLineElement(_textStore, textElement, measurementData);
 
                 // Check mouse overlap
-                if (_mouseData.IsSet())
-                {
-                    // UI Overlap Detected
-                    if (nextElement.Position.VisualBounds.IntersectsWith(_mouseData.SelectionBounds))
-                    {
-                        _textStore.SelectTextProperties(TextPropertySet.Highlighted);
-                        nextElement = ProcessLineElement(_textStore, textElement, measurementData);
-                        _textStore.SelectTextProperties(TextPropertySet.Normal);
-                    }
-                }
+                //if (_mouseData.IsSet())
+                //{
+                //    // UI Overlap Detected
+                //    if (nextElement.Position.VisualBounds.IntersectsWith(_mouseData.SelectionBounds))
+                //    {
+                //        _textStore.SelectTextProperties(TextPropertySet.Highlighted);
+                //        nextElement = ProcessLineElement(_textStore, textElement, measurementData);
+                //        _textStore.SelectTextProperties(TextPropertySet.Normal);
+                //    }
+                //}
 
                 measurementData.CommitElement(nextElement);
             }

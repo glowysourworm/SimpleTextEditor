@@ -45,7 +45,7 @@ namespace SimpleTextEditor.Text
             var insertIndex = _textStore.GetLength();
 
             // Append to source
-            _textStore.AppendText(text);
+            _textStore.AppendText(text, _visualInputData.GetProperties(TextPropertySet.Normal));
 
             // Update TextRun Cache
             _formatter.UpdateCache(insertIndex, text.Length, -1);
@@ -72,7 +72,7 @@ namespace SimpleTextEditor.Text
         public void InsertText(int offset, string text)
         {
             // Insert
-            _textStore.InsertText(offset, text);
+            _textStore.InsertText(offset, text, _visualInputData.GetProperties(TextPropertySet.Normal));
 
             // Update TextRun Cache
             _formatter.UpdateCache(offset, text.Length, -1);

@@ -5,19 +5,19 @@ namespace SimpleTextEditor.Text
 {
     public class LinearTextSource : ITextSource
     {
-        TextString _source;
+        TextEditorString _source;
 
         public LinearTextSource()
         {
-            _source = new TextString();
+            _source = new TextEditorString();
         }
 
-        public void AppendText(string text)
+        public void AppendText(string text, SimpleTextRunProperties properties)
         {
-            _source.Concat(text.ToArray());
+            _source.Concat(text.ToArray(), properties);
         }
 
-        public TextString Get()
+        public TextEditorString Get()
         {
             return _source;
         }
@@ -27,9 +27,9 @@ namespace SimpleTextEditor.Text
             return _source.Length;
         }
 
-        public void InsertText(int offset, string text)
+        public void InsertText(int offset, string text, SimpleTextRunProperties properties)
         {
-            _source.Insert(text.ToArray(), offset);
+            _source.Insert(text.ToArray(), offset, properties);
         }
 
         public void RemoveText(int offset, int count)
@@ -45,11 +45,6 @@ namespace SimpleTextEditor.Text
                 return result;
 
             return -1;
-        }
-
-        public void SetMouseInfo(MouseData mouseData)
-        {
-            throw new NotImplementedException();
         }
     }
 }

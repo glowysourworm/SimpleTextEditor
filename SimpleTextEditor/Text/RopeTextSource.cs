@@ -12,12 +12,12 @@ namespace SimpleTextEditor.Text
             _rope = new Rope();
         }
 
-        public void AppendText(string text)
+        public void AppendText(string text, SimpleTextRunProperties properties)
         {
-            _rope.Append(text);
+            _rope.Append(text, properties);
         }
 
-        public TextString Get()
+        public TextEditorString Get()
         {
             return _rope.Get();
         }
@@ -27,9 +27,9 @@ namespace SimpleTextEditor.Text
             return _rope.GetLength();
         }
 
-        public void InsertText(int offset, string text)
+        public void InsertText(int offset, string text, SimpleTextRunProperties properties)
         {
-            _rope.Insert(offset, text);
+            _rope.Insert(offset, text, properties);
         }
 
         public void RemoveText(int offset, int count)

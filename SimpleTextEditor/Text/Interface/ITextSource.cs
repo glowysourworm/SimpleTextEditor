@@ -4,10 +4,10 @@ namespace SimpleTextEditor.Text.Interface
 {
     public interface ITextSource
     {
-        TextString Get();
+        TextEditorString Get();
         int GetLength();
-        void AppendText(string text);
-        void InsertText(int offset, string text);
+        void AppendText(string text, SimpleTextRunProperties properties);
+        void InsertText(int offset, string text, SimpleTextRunProperties properties);
         void RemoveText(int offset, int count);
         int Search(char character, int startIndex);
     }

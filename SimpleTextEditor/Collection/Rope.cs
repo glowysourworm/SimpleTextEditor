@@ -1,5 +1,6 @@
 ﻿
 using SimpleTextEditor.Collection;
+using SimpleTextEditor.Text;
 
 namespace SimpleTextEditor.Model
 {
@@ -24,20 +25,20 @@ namespace SimpleTextEditor.Model
             return _root.Content.Length;
         }
 
-        public void Insert(int index, string text)
+        public void Insert(int index, string text, SimpleTextRunProperties properties)
         {
             if (_root == null)
-                _root = new RopeNode(new TextString(text.ToArray()));
+                _root = new RopeNode(new TextEditorString(text.ToArray(), properties));
             else
-                _root.Insert(new TextString(text.ToArray()), index);
+                _root.Insert(new TextEditorString(text.ToArray(), properties), index);
         }
 
-        public void Append(string text)
+        public void Append(string text, SimpleTextRunProperties properties)
         {
             if (_root == null)
-                _root = new RopeNode(new TextString(text.ToArray()));
+                _root = new RopeNode(new TextEditorString(text.ToArray(), properties));
             else
-                _root.Append(new TextString(text.ToArray()));
+                _root.Append(new TextEditorString(text.ToArray(), properties));
         }
 
         public void Remove(int index, int count)
@@ -62,10 +63,10 @@ namespace SimpleTextEditor.Model
         /// <summary>
         /// Returns a pointer to the entire text store. (DO NOT ALTER THE TEXT STORE!)
         /// </summary>
-        public TextString Get()
+        public TextEditorString Get()
         {
             if (_root == null)
-                return new TextString();
+                return new TextEditorString();
 
             return _root.Content;
         }
