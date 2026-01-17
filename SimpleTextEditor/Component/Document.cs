@@ -85,6 +85,10 @@ namespace SimpleTextEditor.Component
                     throw new Exception("Unhandled ControlInput Type");
             }
         }
+        public void ProcessMouseInput(MouseData mouseData)
+        {
+            _visualCore.SetMouseInfo(mouseData);
+        }
         public void ProcessInputText(string inputText)
         {
             _visualCore.AppendText(inputText);

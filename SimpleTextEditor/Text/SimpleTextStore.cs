@@ -68,6 +68,10 @@ namespace SimpleTextEditor.Text
 
             SetCaretPosition(offset);
         }
+        public void SetMouseInfo(MouseData mouseData)
+        {
+            _mouseData = mouseData;
+        }
 
         /// <summary>
         /// Gets the position of the caret. The final caret position is off the end 
@@ -119,7 +123,6 @@ namespace SimpleTextEditor.Text
             //{
 
             //}
-
 
             // Create TextCharacters using the current font rendering properties.
             if (characterIndex < _textSource.GetLength())

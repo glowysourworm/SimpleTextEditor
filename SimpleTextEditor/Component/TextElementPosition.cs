@@ -6,7 +6,7 @@ namespace SimpleTextEditor.Component
 {
     public class TextElementPosition : ITextElementPosition
     {
-        public Point VisualPosition { get; }
+        public Rect VisualBounds { get; }
         public int SourceOffset { get; }
         public int SourceLineNumber { get; }
         public int VisualColumn { get; }
@@ -17,9 +17,9 @@ namespace SimpleTextEditor.Component
         {
 
         }
-        public TextElementPosition(Point visualPosition, int sourceOffset, int sourceLineNumber, int visualColumn, int visualLineNumber, int paragraphNumber)
+        public TextElementPosition(Rect visualBounds, int sourceOffset, int sourceLineNumber, int visualColumn, int visualLineNumber, int paragraphNumber)
         {
-            this.VisualPosition = visualPosition;
+            this.VisualBounds = visualBounds;
             this.SourceOffset = sourceOffset;
             this.SourceLineNumber = sourceLineNumber;
             this.VisualColumn = visualColumn;

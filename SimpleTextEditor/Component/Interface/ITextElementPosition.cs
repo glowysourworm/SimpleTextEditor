@@ -5,8 +5,8 @@ namespace SimpleTextEditor.Component.Interface
     public interface ITextElementPosition : ITextPosition
     {
         /// <summary>
-        /// This is the X,Y location of this visual text element (top left corner)
+        /// This is the visual text element UI bounding box
         /// </summary>
-        Point VisualPosition { get; }
+        Rect VisualBounds { get; }
     }
 }

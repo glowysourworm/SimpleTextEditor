@@ -102,6 +102,7 @@ namespace SimpleTextEditor.Text
         public void SetMouseInfo(MouseData mouseData)
         {
             _formatter.SetMouseInfo(mouseData);
+            _textStore.SetMouseInfo(mouseData);
         }
     }
 }

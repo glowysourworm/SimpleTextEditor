@@ -18,6 +18,7 @@ namespace SimpleTextEditor.Component.Interface
         /// </summary>
         void ProcessUILeftClick(Point pointUI);
         void ProcessControlInput(ControlInput input);
+        void ProcessMouseInput(MouseData mouseData);
 
         void ProcessInputText(string inputText);
         void ProcessRemoveText(int offset, int count);

@@ -65,10 +65,10 @@ namespace SimpleTextEditor
         {
             _document = new Document(this.FontFamily,
                                      this.FontSize,
-                                     this.Foreground,
+                                     Brushes.Black,
                                      Brushes.Transparent,
-                                     Brushes.CadetBlue,
                                      Brushes.White,
+                                     Brushes.CadetBlue,
                                      TextWrapping.Wrap);
 
             InvalidateVisual();
@@ -222,6 +222,12 @@ namespace SimpleTextEditor
                 _mouseSelectionRect.Width = right - left;
                 _mouseSelectionRect.Height = bottom - top;
 
+                _document.ProcessMouseInput(new MouseData()
+                {
+                    LeftButton = e.LeftButton,
+                    SelectionBounds = _mouseSelectionRect
+                });
+
                 InvalidateVisual();
             }
         }
@@ -266,21 +272,7 @@ namespace SimpleTextEditor
                 position.X = visualLine.Element.Start + this.Padding.Left;
                 position.Y += visualLine.Element.TextHeight;
 
-                var visualLineRect = new Rect(position, new Size(visualLine.Element.Width, visualLine.Element.Height));
-
-                // Highlighted Text (This could be done with MSFT TextLine; but it's hard to know what to override)
-                if (_mouseDownPoint != null && visualLineRect.IntersectsWith(_mouseSelectionRect))
-                {
-                    foreach (var glyphRun in visualLine.Element.GetIndexedGlyphRuns())
-                    {
-
-                        //geometry.Transform = new TranslateTransform(position.X, position.Y);
-                        //drawingContext.DrawGeometry(Brushes.Blue, new Pen(Brushes.Blue, 1), geometry);
-                    }
-                }
-
-                else
-                    visualLine.Element.Draw(drawingContext, position, InvertAxes.None);
+                visualLine.Element.Draw(drawingContext, position, InvertAxes.None);
             }
 
             if (caretBounds.Height > 0)

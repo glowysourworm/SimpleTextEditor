@@ -84,74 +84,63 @@ namespace SimpleTextEditor.Text
             }
 
             /// <summary>
-            /// Adds elements and updates data
+            /// Measures element based on current input location. Does NOT advance parameters.
             /// </summary>
-            public Point MeasureElement(TextLine textElement)
+            public Rect MeasureElement(TextLine textElement)
             {
-                Rect? boundingBox = null;
-
-                // The indexed GlyphRun elements appear to be the final result
-                foreach (var indexedGlyphRun in textElement.GetIndexedGlyphRuns())
-                {
-                    // Build Geometry
-                    //var geometry = indexedGlyphRun.GlyphRun.BuildGeometry();
-
-
-
-                    foreach (var textBounds in textElement.GetTextBounds(indexedGlyphRun.TextSourceCharacterIndex, indexedGlyphRun.TextSourceLength))
-                    {
-                        if (boundingBox == null)
-                            boundingBox = textBounds.Rectangle;
-                        else
-                            boundingBox.Value.Union(textBounds.Rectangle);
-                    }
-
-                    //if (boundingBox == null)
-                    //    boundingBox = geometry.Bounds;
-
-                    //else
-                    //    boundingBox.Value.Union(geometry.Bounds);
-                }
-
-                return boundingBox?.Location ?? new Point();
+                // The only way to know if there's an X offset is to get the SimpleTextStore to return it to you with the
+                // TextRun instance. There should be data in this TextLine; but I haven't seen any circumstance where this
+                // isn't a "line" of text by itself.
+                //
+                return new Rect(0, (this.VisualLineNumber - 1) * textElement.TextHeight, textElement.Width, textElement.Height);
             }
 
             /// <summary>
-            /// Adds measured element to the data output; and updates variables
+            /// Commits new element to the data and updates properties
             /// </summary>
-            public void AddElement(Point location, TextLine textElement, string cachedText, SimpleTextRunProperties properties)
+            public void CommitElement(SimpleTextElement nextElement)
             {
-                // NEED BETTER WAY TO HANDLE LINES!
-                //var lineBreak = cachedText.Any(x => x == '\r') || textElement.Length == cachedText.Length;
+                this.DesiredHeight += nextElement.Element.TextHeight;
+                this.VisualLineNumber++;
 
-                //measurementData.LastLineBreak = textElement.GetTextLineBreak();
+                // Text Height
+                this.VisualLineHeight = nextElement.Element.TextHeight;
+
+                // TextWidth:  (Line Break (?) (Not likely related to text-wrapping))
+                if (nextElement.Element.WidthIncludingTrailingWhitespace > this.DesiredWidth)
+                    this.DesiredWidth = nextElement.Element.WidthIncludingTrailingWhitespace;
+
+                // Character Offset
+                this.CharacterOffset += nextElement.Length;                                      // Advance Character Offset (text source)
+
+                _visualElements.Add(nextElement);
+            }
+
+            /// <summary>
+            /// Builds element and calculates from current variables (does not update measurement data)
+            /// </summary>
+            public SimpleTextElement BuildElement(Rect visualBounds, TextLine textElement, string cachedText, SimpleTextRunProperties properties)
+            {
+                var desiredHeight = this.DesiredHeight;
+                var desiredWidth = textElement.WidthIncludingTrailingWhitespace;
+                var visualLineNumber = this.VisualLineNumber;
+                var characterOffset = this.CharacterOffset + textElement.Length;
 
                 // Line Breaks are detected by the text store
                 //if (this.LastLineBreak != null)
                 {
                     // Text Height
-                    this.DesiredHeight += textElement.TextHeight;       // Increments Desired Height
+                    desiredHeight += textElement.TextHeight;       // Increments Desired Height
 
                     // Visual Position
-                    this.VisualLineNumber++;                            // Sets current visual line (visual line collection)
+                    visualLineNumber++;                            // Sets current visual line (visual line collection)
                 }
 
-                // Text Height
-                this.VisualLineHeight = textElement.TextHeight;
+                // Text Position
+                var textPosition = new TextElementPosition(visualBounds, characterOffset, 0, 0, visualLineNumber, 0);
 
-                // TextWidth:  (Line Break (?) (Not likely related to text-wrapping))
-                if (textElement.WidthIncludingTrailingWhitespace > this.DesiredWidth)
-                    this.DesiredWidth = textElement.WidthIncludingTrailingWhitespace;
-
-                // Character Offset
-                this.CharacterOffset += textElement.Length;                                      // Advance Character Offset (text source)
-
-                var textPosition = new TextElementPosition(location, this.CharacterOffset, 0, 0, this.VisualLineNumber, 0);
-
-                // Use these to render w/o re-formatting (NOTE*** THE TEXTLINE IS RECEIVING AN EXTRA CHARACTER?!)
-                var nextElement = new SimpleTextElement(textElement, textPosition, properties, cachedText);
-
-                _visualElements.Add(nextElement);
+                // Next Element
+                return new SimpleTextElement(textElement, textPosition, properties, cachedText);
             }
         }
 
@@ -242,13 +231,21 @@ namespace SimpleTextEditor.Text
                                                         _textRunCache);                         // TextRunCache (MSFT) stores output of formatter
 
                 // Process First Pass
-                var firstResult = ProcessLineElement(_textStore, textElement, measurementData);
+                var nextElement = ProcessLineElement(_textStore, textElement, measurementData);
 
-                // UI Overlap Detected
-                if (!firstResult)
+                // Check mouse overlap
+                if (_mouseData.IsSet())
                 {
-                    // TODO
+                    // UI Overlap Detected
+                    if (nextElement.Position.VisualBounds.IntersectsWith(_mouseData.SelectionBounds))
+                    {
+                        _textStore.SelectTextProperties(TextPropertySet.Highlighted);
+                        nextElement = ProcessLineElement(_textStore, textElement, measurementData);
+                        _textStore.SelectTextProperties(TextPropertySet.Normal);
+                    }
                 }
+
+                measurementData.CommitElement(nextElement);
             }
 
             return new SimpleTextVisualOutputData(measurementData.VisualElements,
@@ -281,7 +278,7 @@ namespace SimpleTextEditor.Text
                 // These glyphs trap the caret
                 foreach (var glyphRun in glyphRuns)
                 {
-                    result.X = Math.Max(result.X, textElement.Position.VisualPosition.X + textElement.Element.WidthIncludingTrailingWhitespace);
+                    result.X = Math.Max(result.X, textElement.Position.VisualBounds.X + textElement.Element.WidthIncludingTrailingWhitespace);
                     result.Y = (textElement.Position.VisualLineNumber - 1) * textElement.Element.TextHeight;
                     result.Width = 2;
                     result.Height = textElement.Element.TextHeight;
@@ -302,7 +299,7 @@ namespace SimpleTextEditor.Text
         // Processes current formatted text; and sets MeasurementData accordingly. Returns false if there is another pass needed (this indicates
         // UI overlap).
         //
-        private bool ProcessLineElement(SimpleTextStore textStore, TextLine textElement, MeasurementData measurementData)
+        private SimpleTextElement ProcessLineElement(SimpleTextStore textStore, TextLine textElement, MeasurementData measurementData)
         {
             // Procedure:  How did the TextFormatter know where to put the element? Where is the "current" visual UI position?
             //
@@ -312,15 +309,15 @@ namespace SimpleTextEditor.Text
             //
 
             // Set MeasurementData (updates all parameters, and returns the element's UI location)
-            var location = measurementData.MeasureElement(textElement);
+            var visualBounds = measurementData.MeasureElement(textElement);
 
             // Add Next Element
-            measurementData.AddElement(location,
-                                       textElement,
-                                       textStore.Get().GetSubString(measurementData.CharacterOffset, textElement.Length - 1),
-                                       GetCurrentTextProperties());
+            var nextElement = measurementData.BuildElement(visualBounds,
+                                                           textElement,
+                                                           textStore.Get().GetSubString(measurementData.CharacterOffset, textElement.Length - 1),
+                                                           GetCurrentTextProperties());
 
-            return true;
+            return nextElement;
         }
 
         private SimpleTextRunProperties GetCurrentTextProperties()
