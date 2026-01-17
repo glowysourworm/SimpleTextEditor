@@ -19,11 +19,11 @@ namespace SimpleTextEditor.Text.Interface
         /// <summary>
         /// Returns the properties for the specified offset, along with the length of that specific text run
         /// </summary>
-        SimpleTextRunProperties GetProperties(int offset, out int length);
+        ITextProperties GetProperties(int offset, out int length);
 
         /// <summary>
         /// Sets alternate text properties for a range of text
         /// </summary>
-        void SetProperties(IndexRange range, SimpleTextRunProperties properties);
+        void SetProperties(IndexRange range, ITextProperties properties);
     }
 }

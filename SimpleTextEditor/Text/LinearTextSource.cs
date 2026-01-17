@@ -12,15 +12,15 @@ namespace SimpleTextEditor.Text
         private TextEditorString _source;
 
         // Text Run properties for index ranges
-        private SimpleDictionary<IndexRange, SimpleTextRunProperties> _propertyDict;
+        private SimpleDictionary<IndexRange, ITextProperties> _propertyDict;
 
         // Defaults set by the control
-        private readonly SimpleTextRunProperties _defaultProperties;
+        private readonly ITextProperties _defaultProperties;
 
-        public LinearTextSource(SimpleTextRunProperties defaultProperties)
+        public LinearTextSource(ITextProperties defaultProperties)
         {
             _source = new TextEditorString();
-            _propertyDict = new SimpleDictionary<IndexRange, SimpleTextRunProperties>();
+            _propertyDict = new SimpleDictionary<IndexRange, ITextProperties>();
             _defaultProperties = defaultProperties;
         }
 
@@ -39,7 +39,7 @@ namespace SimpleTextEditor.Text
             return _source.Length;
         }
 
-        public SimpleTextRunProperties GetProperties(int offset, out int length)
+        public ITextProperties GetProperties(int offset, out int length)
         {
             var pair = _propertyDict.FirstOrDefault(x => x.Key.Contains(offset));
 
@@ -56,7 +56,7 @@ namespace SimpleTextEditor.Text
             return _defaultProperties;
         }
 
-        public void SetProperties(IndexRange range, SimpleTextRunProperties properties)
+        public void SetProperties(IndexRange range, ITextProperties properties)
         {
             // Affected Ranges (overlapping)
             var affectedRanges = _propertyDict.Filter(x => x.Key.GetOverlap(range) != null);

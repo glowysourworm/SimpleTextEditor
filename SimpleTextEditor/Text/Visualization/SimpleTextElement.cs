@@ -1,4 +1,4 @@
-﻿using System.Windows.Media;
+﻿using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Component.Interface;
 
@@ -11,26 +11,24 @@ namespace SimpleTextEditor.Text.Visualization
     public class SimpleTextElement
     {
         // Visual text line provided by the formatter
-        //TextLine _textElement;
-        FormattedText _textElement;
+        TextLine _textElement;
 
         // Position of the line (source and visual) (also has line data)
         ITextElementPosition _position;
 
         // Shared paragraph properties
         //SimpleTextParagraphProperties _properties;
-        SimpleTextRunProperties _properties;
+        TextRunProperties _properties;
 
         // Extra cache of output for debugging
         string _cachedOutput;
 
-        //public TextLine Element { get { return _textElement; } }
-        public FormattedText Element { get { return _textElement; } }
+        public TextLine Element { get { return _textElement; } }
         public ITextElementPosition Position { get { return _position; } }
-        public int Length { get { return _textElement.Text.Length; } }
-        public SimpleTextRunProperties Properties { get { return _properties; } }
+        public int Length { get { return _textElement.Length; } }
+        public TextRunProperties Properties { get { return _properties; } }
 
-        public SimpleTextElement(FormattedText textElement, ITextElementPosition position, SimpleTextRunProperties properties, string cachedOutput)
+        public SimpleTextElement(TextLine textElement, ITextElementPosition position, TextRunProperties properties, string cachedOutput)
         {
             _textElement = textElement;
             _position = position;

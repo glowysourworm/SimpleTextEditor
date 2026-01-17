@@ -2,6 +2,10 @@
 using System.Windows;
 using System.Windows.Media;
 
+using SimpleTextEditor.Text.Interface;
+
+using SimpleWpf.SimpleCollections.Collection;
+
 namespace SimpleTextEditor.Text.Visualization
 {
     /// <summary>
@@ -26,10 +30,7 @@ namespace SimpleTextEditor.Text.Visualization
         public double LineHeight { get; }
         public double Indent { get; }
 
-        SimpleTextRunProperties _properties;
-        SimpleTextRunProperties _highlightProperties;
-        SimpleTextParagraphProperties _paragraphProperties;
-        SimpleTextParagraphProperties _paragraphHighlightedProperties;
+        SimpleDictionary<TextPropertySet, ITextProperties> _propertyDict;
 
         public SimpleTextVisualInputData(FontFamily fontFamily,
                                          double fontSize,
@@ -42,41 +43,35 @@ namespace SimpleTextEditor.Text.Visualization
             this.LineHeight = 1.0D;
             this.Indent = 0.0D;
 
+            _propertyDict = new SimpleDictionary<TextPropertySet, ITextProperties>();
+
             // Typeface
             var typeface = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
 
             // TextRun Properties
-            _properties = new SimpleTextRunProperties(typeface, PixelsPerDip, fontSize, fontSize, null,
+            var properties = new SimpleTextRunProperties(typeface, PixelsPerDip, fontSize, fontSize, null,
                                                              foreground, background,
                                                              BaselineAlignment.Baseline, CultureInfo.CurrentUICulture);
 
             // TextRun Properties (for highlighted text)
-            _highlightProperties = new SimpleTextRunProperties(typeface, PixelsPerDip, fontSize, fontSize, null,
+            var highlightProperties = new SimpleTextRunProperties(typeface, PixelsPerDip, fontSize, fontSize, null,
                                                                       highlightBrush, highlightBackground,
                                                                       BaselineAlignment.Baseline, CultureInfo.CurrentUICulture);
 
             // Paragraph Properties
-            _paragraphProperties = new SimpleTextParagraphProperties(FlowDirection.LeftToRight, TextAlignment.Left, false, false,
-                                                                _properties, textWrapping, this.LineHeight, this.Indent);
+            var paragraphProperties = new SimpleTextParagraphProperties(FlowDirection.LeftToRight, TextAlignment.Left, false, false,
+                                                                properties, textWrapping, this.LineHeight, this.Indent);
 
-            _paragraphHighlightedProperties = new SimpleTextParagraphProperties(FlowDirection.LeftToRight, TextAlignment.Left, false, false,
-                                                                         _highlightProperties, textWrapping, this.LineHeight, this.Indent);
+            var paragraphHighlightedProperties = new SimpleTextParagraphProperties(FlowDirection.LeftToRight, TextAlignment.Left, false, false,
+                                                                         highlightProperties, textWrapping, this.LineHeight, this.Indent);
+
+            _propertyDict.Add(TextPropertySet.Normal, new SimpleTextProperties(properties, paragraphProperties));
+            _propertyDict.Add(TextPropertySet.Highlighted, new SimpleTextProperties(highlightProperties, paragraphHighlightedProperties));
         }
 
-        public SimpleTextRunProperties GetProperties(TextPropertySet propertySet)
+        public ITextProperties GetProperties(TextPropertySet propertySet)
         {
-            if (propertySet == TextPropertySet.Normal)
-                return _properties;
-
-            return _highlightProperties;
-        }
-
-        public SimpleTextParagraphProperties GetParagraphProperties(TextPropertySet propertySet)
-        {
-            if (propertySet == TextPropertySet.Normal)
-                return _paragraphProperties;
-
-            return _paragraphHighlightedProperties;
+            return _propertyDict[propertySet];
         }
     }
 }

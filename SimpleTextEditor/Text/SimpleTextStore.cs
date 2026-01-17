@@ -63,7 +63,7 @@ namespace SimpleTextEditor.Text
 
             SetCaretPosition(offset);
         }
-        public void SetProperties(IndexRange range, SimpleTextRunProperties properties)
+        public void SetProperties(IndexRange range, ITextProperties properties)
         {
             _textSource.SetProperties(range, properties);
         }
@@ -93,7 +93,12 @@ namespace SimpleTextEditor.Text
         {
             // Make sure text source index is in bounds.
             if (characterIndex < 0 || characterIndex >= _textSource.GetLength())
-                throw new ArgumentOutOfRangeException("characterIndex", "Value must be greater than 0.");
+            {
+                //throw new ArgumentOutOfRangeException("characterIndex", "Value must be greater than 0.");
+
+                return new TextEndOfLine(1);
+            }
+
 
             // PERFORMANCE PROBLEM:  WE HAVE TO PRODUCE A TEXT MEASUREMENT TO SEE IF THE MOUSE
             // IS HIGHLIGHTING THE TEXT! SO, THIS FORMATTED TEXT WILL ALREADY BE AVAILABLE.
@@ -104,13 +109,13 @@ namespace SimpleTextEditor.Text
             // End of Line
             if (_textSource.Get().Get()[characterIndex] == '\r')
             {
-                return new TextEndOfLine(0);
+                return new TextEndOfLine(1);
             }
 
             // End of Paragraph
             if (characterIndex >= _textSource.GetLength())
             {
-                return new TextEndOfParagraph(0);
+                return new TextEndOfParagraph(1);
             }
 
             // PERFORMANCE!  This needs to be built into the text source. 
@@ -134,7 +139,7 @@ namespace SimpleTextEditor.Text
                 return new TextCharacters(_textSource.Get().Get(),
                                           characterIndex,
                                           propertyLength,
-                                          textProperties);
+                                          textProperties.Properties);
             }
 
             // Return an end-of-paragraph if no more text source.
@@ -164,7 +169,7 @@ namespace SimpleTextEditor.Text
             return _textSource.GetPropertySlices();
         }
 
-        public SimpleTextRunProperties GetProperties(int offset, out int length)
+        public ITextProperties GetProperties(int offset, out int length)
         {
             return _textSource.GetProperties(offset, out length);
         }
