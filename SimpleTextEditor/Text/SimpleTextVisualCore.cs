@@ -59,7 +59,7 @@ namespace SimpleTextEditor.Text
             _formatter.UpdateCache(insertIndex, text.Length, -1);
 
             // Update Caret Position
-            _caretTracker.SetCaretPosition(text.Length - 1);
+            _caretTracker.SetCaretPosition(_textSource.GetLength() - 1);
         }
 
         public Rect GetCaretBounds()

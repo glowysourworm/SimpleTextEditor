@@ -19,10 +19,10 @@ namespace SimpleTextEditor.Text
         // the TextString is not shared between nodes.
         private ITextSource _textSource;
 
-        private string _currentLine;
-        private int _textLineOffset;
-        private int _textLineCharacterOffset;
-        private IDictionary<IndexRange, ITextProperties> _textLineProperties;
+        //private string _currentLine;
+        //private int _textLineOffset;
+        //private int _textLineCharacterOffset;
+        //private IDictionary<IndexRange, ITextProperties> _textLineProperties;
 
         public SimpleTextRunProvider(ITextSource textSource)
         {
@@ -34,61 +34,60 @@ namespace SimpleTextEditor.Text
                                          int textLineCharacterOffset,
                                          IDictionary<IndexRange, ITextProperties> textLineProperties)
         {
-            _currentLine = currentLine;
-            _textLineOffset = textLineOffset;
-            _textLineCharacterOffset = textLineCharacterOffset;
-            _textLineProperties = textLineProperties;
+            //_currentLine = currentLine;
+            //_textLineOffset = textLineOffset;
+            //_textLineCharacterOffset = textLineCharacterOffset;
+            //_textLineProperties = textLineProperties;
         }
 
         /// <summary>
-        /// Used by the TextFormatter object to retrieve a run of text from the text source. 
+        /// INPUT CONDITIONS:  The TextFormatter will recall this method until it has found a TextEndOfParagraph, or some
+        ///                    end of line or paragraph TextRun. The character index may go over the end of the ITextSource.
+        ///                    Making sure we exhaust the ITextSource properly requires that we know how the end of line
+        ///                    is being tracked, at least by our code! 
+        ///                    
+        ///                    MSFT was not very clear about how to do all the nuts-and-bolts of text processing for a
+        ///                    document-style application. But, the TextFormatter is the best performance you'll get for
+        ///                    WPF.
         /// </summary>
         public override TextRun GetTextRun(int characterIndex)
         {
-            if (_textLineProperties == null)
-                throw new Exception("Must call SetLineRunProperties before using TextFormatter with SimpleTextRunProvider");
+            // This will be needed to know how much text to output this call
+            //
+            var nextEOLIndex = characterIndex >= _textSource.GetLength() ? -1 : _textSource.Search('\r', characterIndex);
 
-            // STILL TRYING TO FIGURE OUT HOW TO SIGNAL EOL FOR A SINGLE TEXT LINE!
+            // HOW TO SIGNAL EOL FOR A SINGLE TEXT LINE!
             //
             // https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/advanced-text-formatting
             //
-            if (characterIndex == _currentLine.Length)
+            if (characterIndex == _textSource.GetLength())
                 return new TextEndOfParagraph(1);
 
-            var currentRange = _textLineProperties.Keys.FirstOrDefault(x => x.Contains(characterIndex));
-
-            if (currentRange == null)
-                throw new Exception("Trying to format text outside the bounds of the current line set by calling SimpleTextRunProvider");
-
-            if (characterIndex >= _textLineCharacterOffset + _currentLine.Length)
-                throw new ArgumentOutOfRangeException("Internal failure:  ITextSource prepared inaccurate index data!");
-
-            // Make sure text source index is in bounds.
-            if (characterIndex == _textLineCharacterOffset + _currentLine.Length - 1)
+            // These will be caught by the formatter so that the text measurement
+            // can know where it is vertically.
+            if (_textSource.Get().Get()[characterIndex] == '\r')
             {
                 return new TextEndOfLine(1);
             }
 
-            // End of Paragraph
-            //if (characterIndex >= _textSource.GetLength())
-            //{
-            //    return new TextEndOfParagraph(1);
-            //}
-
             // Create TextCharacters using the current font rendering properties.
             if (characterIndex < _textSource.GetLength())
             {
-                var currentProperties = _textLineProperties[currentRange];
+                var currentPropertyLength = 0;
+                var currentProperties = _textSource.GetProperties(characterIndex, out currentPropertyLength);
 
-                if (currentRange.StartIndex != characterIndex)
-                    Console.WriteLine("Possible character indexing out of place:  SimpleTextRunProvider.cs");
+                // Render Length:  This will make sure to render the current character, up to but NOT INCLUDING, the EOL character.
+                //                 The EOL character will be renedered on the next call to the GetTextRun method, which will get 
+                //                 caught above and return the TextEndOfLine.
+                //
+                var renderLength = nextEOLIndex == -1 ? _textSource.GetLength() - characterIndex : nextEOLIndex - characterIndex;
 
                 // TextCharacters requires an absolute index into the char[]. There may be a way to utilize char* for 
                 // better (native) performance; but that would take some testing and playing around.
                 //
-                return new TextCharacters(_currentLine,
-                                          0,
-                                          _currentLine.Length,
+                return new TextCharacters(_textSource.Get().Get(),
+                                          characterIndex,
+                                          renderLength,
                                           currentProperties.Properties);
             }
 

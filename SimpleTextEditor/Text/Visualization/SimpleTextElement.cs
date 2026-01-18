@@ -16,29 +16,14 @@ namespace SimpleTextEditor.Text.Visualization
         // Position of the line (source and visual) (also has line data)
         ITextElementPosition _position;
 
-        // Shared paragraph properties
-        //SimpleTextParagraphProperties _properties;
-        TextRunProperties _properties;
-
-        // Extra cache of output for debugging
-        string _cachedOutput;
-
         public TextLine Element { get { return _textElement; } }
         public ITextElementPosition Position { get { return _position; } }
         public int Length { get { return _textElement.Length; } }
-        public TextRunProperties Properties { get { return _properties; } }
 
-        public SimpleTextElement(TextLine textElement, ITextElementPosition position, TextRunProperties properties, string cachedOutput)
+        public SimpleTextElement(TextLine textElement, ITextElementPosition position)
         {
             _textElement = textElement;
             _position = position;
-            _cachedOutput = cachedOutput;
-            _properties = properties;
-        }
-
-        public override string ToString()
-        {
-            return _cachedOutput;
         }
     }
 }

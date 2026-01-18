@@ -116,15 +116,19 @@ namespace SimpleTextEditor.Model
                 // Calculate Next Sub-Array
                 nextArray = GetSubArray(index == 0 ? 0 : splitIndices[index - 1], splitIndices[index], keepSplitCharacter);
 
-                result.Add(nextArray);
+                // TBD
+                if (nextArray.Length > 0)
+                    result.Add(nextArray);
 
                 index++;
             }
 
             // Final Split (Copy) (careful with split character, here)
-            nextArray = GetSubArray(keepSplitCharacter ? splitIndices[index - 1] + 1 : splitIndices[index - 1], _content.Length - 1, true);
+            nextArray = GetSubArray(keepSplitCharacter ? splitIndices[index - 1] : splitIndices[index - 1] + 1, _content.Length - 1, true);
 
-            result.Add(nextArray);
+            // TBD
+            if (nextArray.Length > 0)
+                result.Add(nextArray);
 
             return result.ToArray();
         }

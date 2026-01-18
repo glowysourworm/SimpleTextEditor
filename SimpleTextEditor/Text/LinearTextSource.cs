@@ -161,10 +161,11 @@ namespace SimpleTextEditor.Text
 
         public int Search(char character, int startIndex)
         {
-            var result = _source.Get().IndexOf(character);
-
-            if (result >= startIndex)
-                return result;
+            for (int index = startIndex; index < _source.Get().Length; index++)
+            {
+                if (_source.Get()[index] == character)
+                    return index;
+            }
 
             return -1;
         }
