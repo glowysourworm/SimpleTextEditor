@@ -18,8 +18,14 @@ namespace SimpleTextEditor.Text
         // Visual Output Data (last)
         SimpleTextVisualOutputData? _lastVisualOutputData;
 
+        // Primary text source
+        ITextSource _textSource;
+
         // Primary text store
-        SimpleTextStore _textStore;
+        SimpleTextRunProvider _textRunProvider;
+
+        // Primary text caret source
+        SimpleCaretTracker _caretTracker;
 
         // MSFT Advanced text formatting
         SimpleTextEditorFormatter _formatter;
@@ -33,8 +39,10 @@ namespace SimpleTextEditor.Text
                                     TextWrapping textWrapping)
         {
             _visualInputData = new SimpleTextVisualInputData(fontFamily, fontSize, foreground, background, highlightForeground, highlightBackground, textWrapping);
-            _textStore = new SimpleTextStore(_visualInputData);
-            _formatter = new SimpleTextEditorFormatter(_textStore, _visualInputData);
+            _textSource = new LinearTextSource(_visualInputData.GetProperties(TextPropertySet.Normal));
+            _textRunProvider = new SimpleTextRunProvider(_textSource);
+            _caretTracker = new SimpleCaretTracker();
+            _formatter = new SimpleTextEditorFormatter(_textRunProvider, _textSource, _caretTracker, _visualInputData);
 
             _lastVisualOutputData = null;
         }
@@ -42,13 +50,16 @@ namespace SimpleTextEditor.Text
         public void AppendText(string text)
         {
             // Insert
-            var insertIndex = _textStore.GetLength();
+            var insertIndex = _textSource.GetLength();
 
             // Append to source
-            _textStore.AppendText(text);
+            _textSource.AppendText(text);
 
             // Update TextRun Cache
             _formatter.UpdateCache(insertIndex, text.Length, -1);
+
+            // Update Caret Position
+            _caretTracker.SetCaretPosition(text.Length - 1);
         }
 
         public Rect GetCaretBounds()
@@ -61,21 +72,24 @@ namespace SimpleTextEditor.Text
 
         public string GetTextCopy()
         {
-            return _textStore.ToString() ?? string.Empty;
+            return _textSource.ToString() ?? string.Empty;
         }
 
         public int GetTextLength()
         {
-            return _textStore.GetLength();
+            return _textSource.GetLength();
         }
 
         public void InsertText(int offset, string text)
         {
             // Insert
-            _textStore.InsertText(offset, text);
+            _textSource.InsertText(offset, text);
 
             // Update TextRun Cache
             _formatter.UpdateCache(offset, text.Length, -1);
+
+            // Update Caret
+            _caretTracker.SetCaretPosition(offset);
         }
 
         public SimpleTextVisualOutputData Measure(Size constraint)
@@ -88,15 +102,18 @@ namespace SimpleTextEditor.Text
         public void RemoveText(int offset, int count)
         {
             // Remove
-            _textStore.RemoveText(offset, count);
+            _textSource.RemoveText(offset, count);
 
             // Update TextRun Cache
             _formatter.UpdateCache(offset, -1, offset);
+
+            // Update Caret
+            _caretTracker.SetCaretPosition(offset);
         }
 
         public int SearchText(char character, int startIndex)
         {
-            return _textStore.Search(character, startIndex);
+            return _textSource.Search(character, startIndex);
         }
 
         public bool SetMouseInfo(MouseData mouseData)
@@ -111,7 +128,7 @@ namespace SimpleTextEditor.Text
                     if (element.Position.VisualBounds.IntersectsWith(mouseData.SelectionBounds))
                     {
 
-                        _textStore.SetProperties(IndexRange.FromStartCount(element.Position.SourceOffset,
+                        _textSource.SetProperties(IndexRange.FromStartCount(element.Position.SourceOffset,
                                                  element.Length),
                                                  _visualInputData.GetProperties(TextPropertySet.Highlighted));
 

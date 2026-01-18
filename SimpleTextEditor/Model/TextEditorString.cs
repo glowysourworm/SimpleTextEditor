@@ -1,6 +1,6 @@
-﻿using System.Buffers;
+﻿using SimpleTextEditor.Extension;
 
-using SimpleTextEditor.Extension;
+using SimpleWpf.Extensions.Collection;
 
 namespace SimpleTextEditor.Model
 {
@@ -74,43 +74,70 @@ namespace SimpleTextEditor.Model
             return GetString().GetWhiteSpaces(includeSingleWhiteSpace);
         }
 
-        public IList<char[]> Split(int index)
+        public IList<char[]> Split(int index, bool keepSplitCharacter)
         {
             if (index < 0 || index >= _content.Length)
                 throw new ArgumentOutOfRangeException();
 
-            var array1 = new char[index + 1];
-            var array2 = new char[_content.Length - index - 1];
-
-            Array.Copy(_content, 0, array1, 0, array1.Length);
-            Array.Copy(_content, index + 1, array2, 0, array2.Length);
-
-            return new char[][] { array1, array2 };
+            return Split(keepSplitCharacter, new int[] { index });
         }
 
-        public IList<char[]> Split(char character)
+        public IList<char[]> Split(char character, bool keepSplitCharacter)
         {
-            var result = new List<char[]>();
-            var nextString = string.Empty;
+            var splitIndices = new List<int>();
 
             for (int index = 0; index < _content.Length; index++)
             {
                 // Next Character
-                if (_content[index] == character && nextString.Length > 0)
-                {
-                    result.Add(nextString.ToArray());
-
-                    // Reset
-                    nextString = string.Empty;
-                }
-                else
-                    nextString = string.Concat(nextString, _content[index]);
+                if (_content[index] == character)
+                    splitIndices.Add(index);
             }
 
-            if (nextString.Length > 0)
-                result.Add(nextString.ToArray());
+            return Split(keepSplitCharacter, splitIndices.ToArray());
+        }
 
-            return result;
+        public IList<char[]> Split(bool keepSplitCharacter, params int[] splitIndices)
+        {
+            // Creating copy intentionally for the user code
+            if (splitIndices.Length == 0)
+                return new List<char[]>() { _content.Copy().ToArray() };
+
+            var result = new List<char[]>();
+            var index = 0;
+
+            char[] nextArray;
+
+            while (index < splitIndices.Length)
+            {
+                if (splitIndices[index] < 1 ||
+                    splitIndices[index] >= _content.Length)
+                    throw new IndexOutOfRangeException("Must split text editor string after the first index, and before or equal to the last");
+
+                // Calculate Next Sub-Array
+                nextArray = GetSubArray(index == 0 ? 0 : splitIndices[index - 1], splitIndices[index], keepSplitCharacter);
+
+                result.Add(nextArray);
+
+                index++;
+            }
+
+            // Final Split (Copy) (careful with split character, here)
+            nextArray = GetSubArray(keepSplitCharacter ? splitIndices[index - 1] + 1 : splitIndices[index - 1], _content.Length - 1, true);
+
+            result.Add(nextArray);
+
+            return result.ToArray();
+        }
+
+        private char[] GetSubArray(int startIndex, int splitIndex, bool keepSplitCharacter)
+        {
+            // Create Next Sub-Array
+            var nextArray = new char[keepSplitCharacter ? splitIndex - startIndex + 1 : splitIndex - startIndex];
+
+            // Copy Sub-Array
+            Array.Copy(_content, startIndex, nextArray, 0, nextArray.Length);
+
+            return nextArray;
         }
 
         public string GetString()

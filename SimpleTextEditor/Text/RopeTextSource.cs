@@ -26,7 +26,10 @@ namespace SimpleTextEditor.Text
         {
             return _rope.GetLength();
         }
-
+        public IList<char[]> GetTextLines(bool keepEOLCharacter)
+        {
+            throw new NotImplementedException();
+        }
         public void InsertText(int offset, string text)
         {
             _rope.Insert(offset, text);
@@ -58,6 +61,11 @@ namespace SimpleTextEditor.Text
         }
 
         public void SetProperties(IndexRange range, ITextProperties properties)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IDictionary<IndexRange, ITextProperties> GetTextLineProperties(char[] textLine, int textLineOffset, int textLineCharacterOffset)
         {
             throw new NotImplementedException();
         }

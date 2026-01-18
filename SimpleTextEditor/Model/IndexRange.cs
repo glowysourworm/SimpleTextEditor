@@ -76,6 +76,8 @@ namespace SimpleTextEditor.Model
                 var range = IndexRange.FromIndices(index == 0 ? this.StartIndex : offsets[index - 1], offsets[index] - 1);
 
                 result.Add(range);
+
+                index++;
             }
 
             // Final Split

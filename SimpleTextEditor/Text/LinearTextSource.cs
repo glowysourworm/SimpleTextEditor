@@ -1,4 +1,6 @@
-﻿using SimpleTextEditor.Model;
+﻿using System.Data;
+
+using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Interface;
 
 using SimpleWpf.SimpleCollections.Collection;
@@ -37,6 +39,64 @@ namespace SimpleTextEditor.Text
         public int GetLength()
         {
             return _source.Length;
+        }
+
+        public IList<char[]> GetTextLines(bool keepEOLCharacter)
+        {
+            return _source.Split('\r', keepEOLCharacter);
+        }
+
+        public IDictionary<IndexRange, ITextProperties> GetTextLineProperties(char[] textLine, int textLineOffset, int textLineCharacterOffset)
+        {
+            // Ranges with alternate properties
+            var propertyRanges = GetPropertySlices();
+
+            var currentLine = new string(textLine);
+            var propertiesDict = new SimpleDictionary<IndexRange, ITextProperties>();
+            var alternateOverlaps = new List<IndexRange>();
+            var currentRange = IndexRange.FromStartCount(textLineCharacterOffset, textLine.Length);
+
+            // Alternate Properties
+            foreach (var range in propertyRanges)
+            {
+                var overlap = range.GetOverlap(textLineCharacterOffset, textLineCharacterOffset + textLine.Length - 1);
+
+                // Found Sub-Section w/ Alternate Properties
+                //
+                if (overlap != null)
+                    alternateOverlaps.Add(overlap);
+            }
+
+            // Alternate Text
+            if (alternateOverlaps.Count > 0)
+            {
+                var startIndexes = alternateOverlaps.Select(x => x.StartIndex).ToList();
+                var endIndexes = alternateOverlaps.Select(x => x.EndIndex).ToList();
+                var splitIndices = startIndexes.Concat(endIndexes)
+                                               .Where(x => x > currentRange.StartIndex)         // Must split before the character
+                                               .Order()                                         // Must order split indices
+                                               .ToArray();
+
+                // Alternate Property Indices
+                var splits = currentRange.Split(splitIndices);
+
+                foreach (var range in splits)
+                {
+                    var length = 0;
+                    var properties = GetProperties(range.StartIndex, out length);
+
+                    // Create Formatted Text
+                    propertiesDict.Add(range, properties);
+                }
+            }
+
+            // Default Text
+            else
+            {
+                propertiesDict.Add(currentRange, _defaultProperties);
+            }
+
+            return propertiesDict;
         }
 
         public ITextProperties GetProperties(int offset, out int length)

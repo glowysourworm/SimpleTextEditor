@@ -3,11 +3,8 @@ using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Component;
-using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Visualization;
-
-using SimpleWpf.SimpleCollections.Collection;
 
 namespace SimpleTextEditor.Text
 {
@@ -23,13 +20,16 @@ namespace SimpleTextEditor.Text
         readonly SimpleTextVisualInputData _visualInputData;
 
         // Primary text store
-        readonly SimpleTextStore _textStore;
+        readonly ITextSource _textSource;
 
-        // Empty text store used for formatting
-        readonly SimpleTextStore _emptyTextStore;
+        // Primary TextRun source
+        readonly ITextRunProvider _textRunProvider;
 
         // Supposedly helps improve performance
         readonly TextRunCache _textRunCache;
+
+        // Primary caret tracker
+        readonly SimpleCaretTracker _caretTracker;
 
         // Class for handling measurement pass
         protected class MeasurementData
@@ -144,12 +144,13 @@ namespace SimpleTextEditor.Text
             }
         }
 
-        public SimpleTextEditorFormatter(SimpleTextStore textStore, SimpleTextVisualInputData visualInputData)
+        public SimpleTextEditorFormatter(ITextRunProvider textRunProvider, ITextSource textSource, SimpleCaretTracker caretTracker, SimpleTextVisualInputData visualInputData)
         {
             _formatter = TextFormatter.Create(TextFormattingMode.Display);
             _visualInputData = visualInputData;
-            _emptyTextStore = new SimpleTextStore(visualInputData);
-            _textStore = textStore;
+            _caretTracker = caretTracker;
+            _textSource = textSource;
+            _textRunProvider = textRunProvider;
             _textRunCache = new TextRunCache();
         }
 
@@ -162,8 +163,8 @@ namespace SimpleTextEditor.Text
         /// <param name="removalLength">removal length</param>
         public void UpdateCache(int offset, int additionLength, int removalLength)
         {
-            _textRunCache.Invalidate();
-            //_textRunCache.Change(offset, additionLength, removalLength);
+            //_textRunCache.Invalidate();
+            _textRunCache.Change(offset, additionLength, removalLength);
         }
 
         /// <summary>
@@ -206,75 +207,34 @@ namespace SimpleTextEditor.Text
 
             var measurementData = new MeasurementData();
 
-            // Ranges with alternate properties
-            var propertyRanges = _textStore.GetPropertySlices();
-
             // Text Lines
-            var textLines = _textStore.Get().Split('\r');
+            var textLines = _textSource.GetTextLines(true);
+            var textLineIndex = 0;
 
             foreach (var textLine in textLines)
             {
-                var currentLine = new string(textLine);
-                var propertiesDict = new SimpleDictionary<IndexRange, ITextProperties>();
-                var alternateOverlaps = new List<IndexRange>();
-                var currentRange = IndexRange.FromStartCount(measurementData.CharacterOffset, textLine.Length);
-
-                // Alternate Properties
-                foreach (var range in propertyRanges)
-                {
-                    var overlap = range.GetOverlap(measurementData.CharacterOffset, measurementData.CharacterOffset + textLine.Length);
-
-                    // Found Sub-Section w/ Alternate Properties
-                    //
-                    if (overlap != null)
-                        alternateOverlaps.Add(overlap);
-                }
-
-                // Alternate Text
-                if (alternateOverlaps.Count > 0)
-                {
-                    var startIndexes = alternateOverlaps.Select(x => x.StartIndex).ToList();
-                    var endIndexes = alternateOverlaps.Select(x => x.EndIndex).ToList();
-                    var splitIndices = startIndexes.Concat(endIndexes)
-                                                   .Where(x => x > currentRange.StartIndex)         // Must split before the character
-                                                   .Order()                                         // Must order split indices
-                                                   .ToArray();
-
-                    // Alternate Property Indices
-                    var splits = currentRange.Split(splitIndices);
-
-                    foreach (var range in splits)
-                    {
-                        var length = 0;
-                        var properties = _textStore.GetProperties(range.StartIndex, out length);
-
-                        // Create Formatted Text
-                        propertiesDict.Add(range, properties);
-                    }
-                }
-
-                // Default Text
-                else
-                {
-                    propertiesDict.Add(currentRange, _visualInputData.GetProperties(TextPropertySet.Normal));
-                }
+                // Calculates properties for the current line of text. These are used by the TextFormatter.
+                var propertiesDict = _textSource.GetTextLineProperties(textLine, textLineIndex, measurementData.CharacterOffset);
 
                 // Create Spans of Text
                 foreach (var pair in propertiesDict)
                 {
                     TextLineBreak? lastLineBreak = null;
 
+                    // Set ITextRunProvider
+                    _textRunProvider.SetLineRunProperties(new string(textLine), textLineIndex, measurementData.CharacterOffset, propertiesDict);
+
                     // First Pass Measurement
                     //
-                    var textElement = _formatter.FormatLine(_textStore,                             // TextStore sub-class
-                                                            measurementData.CharacterOffset,        // Character offset to ITextSource
-                                                            constraint.Width,                       // UI Width
-                                                            pair.Value.ParagraphProperties,         // Visual Properties
-                                                            lastLineBreak,                          // Last Line Break
-                                                            _textRunCache);                         // TextRunCache (MSFT) stores output of formatter
+                    var textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
+                                                            measurementData.CharacterOffset,              // Character offset to ITextSource
+                                                            constraint.Width,                             // UI Width
+                                                            pair.Value.ParagraphProperties,               // Visual Properties
+                                                            lastLineBreak/*,                              // Last Line Break
+                                                            _textRunCache*/);                             // TextRunCache (MSFT) stores output of formatter
 
                     // Process First Pass
-                    var nextElement = ProcessLineElement(_textStore, textElement, measurementData);
+                    var nextElement = ProcessLineElement(textElement, measurementData);
 
                     // Check mouse overlap
                     //if (_mouseData.IsSet())
@@ -296,7 +256,7 @@ namespace SimpleTextEditor.Text
             return new SimpleTextVisualOutputData(measurementData.VisualElements,
                                                   constraint,
                                                   new Size(measurementData.DesiredWidth, measurementData.DesiredHeight),
-                                                  _textStore.GetLength());
+                                                  _textSource.GetLength());
         }
 
         // Completes the measurement process by calculating the caret bounds
@@ -309,7 +269,7 @@ namespace SimpleTextEditor.Text
                 return Rect.Empty;
 
             // This is AHEAD BY ONE!
-            var caretPosition = _textStore.GetCaretPosition();
+            var caretPosition = _caretTracker.GetCaretPosition();
             var result = new Rect();
 
             // Need to locate the glyph run boxes where the caret position lies
@@ -344,7 +304,7 @@ namespace SimpleTextEditor.Text
         // Processes current formatted text; and sets MeasurementData accordingly. Returns false if there is another pass needed (this indicates
         // UI overlap).
         //
-        private SimpleTextElement ProcessLineElement(SimpleTextStore textStore, TextLine textElement, MeasurementData measurementData)
+        private SimpleTextElement ProcessLineElement(TextLine textElement, MeasurementData measurementData)
         {
             // Procedure:  How did the TextFormatter know where to put the element? Where is the "current" visual UI position?
             //
@@ -359,7 +319,7 @@ namespace SimpleTextEditor.Text
             // Add Next Element
             var nextElement = measurementData.BuildElement(visualBounds,
                                                            textElement,
-                                                           textStore.Get().GetSubString(measurementData.CharacterOffset, textElement.Length - 1),
+                                                           _textSource.Get().GetSubString(measurementData.CharacterOffset, textElement.Length - 1),
                                                            _visualInputData.GetProperties(TextPropertySet.Normal).Properties);
 
             return nextElement;

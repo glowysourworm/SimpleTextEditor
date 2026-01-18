@@ -76,7 +76,7 @@ namespace SimpleTextEditor.Collection
                 if (middleIndex == -1)
                     throw new Exception("Invalid content for RopeNode. No middle index found for the string " + content);
 
-                var contentParts = content.Split(middleIndex);
+                var contentParts = content.Split(middleIndex, true);
 
                 if (_left != null)
                 {
