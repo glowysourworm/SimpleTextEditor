@@ -204,13 +204,19 @@ namespace SimpleTextEditor.Text
                 // Click Drag
                 else
                 {
-                    var isAppendPosition = false;
-                    var textPosition1 = _formatter.VisualPointToTextPosition(mouseData.MouseDownLocation.Value, out isAppendPosition);
-                    var textPosition2 = _formatter.VisualPointToTextPosition(mouseData.MouseLocation, out isAppendPosition);
+                    var isAppendPosition1 = false;
+                    var isAppendPosition2 = false;
+                    var textPosition1 = _formatter.VisualPointToTextPosition(mouseData.MouseDownLocation.Value, out isAppendPosition1);
+                    var textPosition2 = _formatter.VisualPointToTextPosition(mouseData.MouseLocation, out isAppendPosition2);
                     var startIndex = Math.Min(textPosition1.SourceOffset, textPosition2.SourceOffset);
                     var endIndex = Math.Max(textPosition1.SourceOffset, textPosition2.SourceOffset);
                     var selectRange = IndexRange.FromIndices(startIndex, endIndex);
 
+                    // Move Caret
+                    UpdateCaret(textPosition2, isAppendPosition2);
+
+                    // Highlight Selection
+                    _textSource.ClearProperties();
                     _textSource.SetProperties(selectRange, _visualInputData.GetProperties(TextPropertySet.Highlighted));
                 }
 

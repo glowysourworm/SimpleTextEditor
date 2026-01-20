@@ -106,6 +106,12 @@ namespace SimpleTextEditor.Text
                 {
                     renderLength = nextEOLIndex - characterIndex;
                 }
+                else if (currentPropertyLength > 0)
+                {
+                    renderLength = currentPropertyLength;
+                }
+                else
+                    renderLength = _textSource.GetLength() - characterIndex;
 
                 // TextCharacters requires an absolute index into the char[]. There may be a way to utilize char* for 
                 // better (native) performance; but that would take some testing and playing around.
