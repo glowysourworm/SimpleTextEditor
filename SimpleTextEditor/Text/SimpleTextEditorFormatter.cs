@@ -3,8 +3,11 @@ using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Component;
+using SimpleTextEditor.Component.Interface;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Visualization;
+
+using SimpleWpf.Extensions.Collection;
 
 namespace SimpleTextEditor.Text
 {
@@ -15,6 +18,8 @@ namespace SimpleTextEditor.Text
     {
         // (see MSFT Advanced Text Formatting)
         TextFormatter _formatter;
+
+        SimpleTextVisualOutputData _lastOutputData;
 
         // Input data to the formatter
         readonly SimpleTextVisualInputData _visualInputData;
@@ -28,14 +33,10 @@ namespace SimpleTextEditor.Text
         // Supposedly helps improve performance
         readonly TextRunCache _textRunCache;
 
-        // Primary caret tracker
-        readonly SimpleCaretTracker _caretTracker;
-
         public SimpleTextEditorFormatter(ITextRunProvider textRunProvider, ITextSource textSource, SimpleCaretTracker caretTracker, SimpleTextVisualInputData visualInputData)
         {
             _formatter = TextFormatter.Create(TextFormattingMode.Display);
             _visualInputData = visualInputData;
-            _caretTracker = caretTracker;
             _textSource = textSource;
             _textRunProvider = textRunProvider;
             _textRunCache = new TextRunCache();
@@ -62,7 +63,7 @@ namespace SimpleTextEditor.Text
             _textRunCache.Invalidate();
         }
 
-        public SimpleTextVisualOutputData MeasureText(Size constraint)
+        public void MeasureText(Size constraint)
         {
             // Procedure: This must take into account several pre-conditions. The use of the text
             //            formatter depends on what's going on on the UI, so there are UI properties
@@ -100,7 +101,7 @@ namespace SimpleTextEditor.Text
             var desiredHeight = 0D;
             var desiredWidth = 0D;
 
-            while (characterOffset < _textSource.GetLength())
+            while (characterOffset <= _textSource.GetLength())
             {
                 // Pretty sure this will be for text wrapping! (see the TextSource for how EOL works)
                 TextLineBreak? lastLineBreak = null;
@@ -146,52 +147,110 @@ namespace SimpleTextEditor.Text
             }
 
 
-            return new SimpleTextVisualOutputData(textElements,
-                                                  constraint,
-                                                  new Size(desiredWidth, desiredHeight),
-                                                  _textSource.GetLength());
+            _lastOutputData = new SimpleTextVisualOutputData(textElements,
+                                                              constraint,
+                                                              new Size(desiredWidth, desiredHeight),
+                                                              _textSource.GetLength());
         }
 
-        // Completes the measurement process by calculating the caret bounds
-        public Rect CalculateCaretBounds(SimpleTextVisualOutputData lastOutput, Size constraint)
+        public SimpleTextVisualOutputData GetLastOutput()
         {
-            var lineHeight = lastOutput.VisualElements.Max(x => x.Element.TextHeight);
+            return _lastOutputData;
+        }
 
-            // Measure Caret while we're here (check for empty text)
-            if (lineHeight == 0)
-                return Rect.Empty;
+        public ITextPosition CharacterOffsetToTextPosition(int characterOffset)
+        {
+            if (_lastOutputData == null)
+                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
 
-            // This is AHEAD BY ONE!
-            var caretPosition = _caretTracker.GetCaretPosition();
-            var result = new Rect();
+            if (characterOffset < 0 ||
+                characterOffset >= _lastOutputData.SourceLength)
+                throw new ArgumentOutOfRangeException();
 
-            // Need to locate the glyph run boxes where the caret position lies
-            foreach (var textElement in lastOutput.VisualElements)
+            foreach (var visualElement in _lastOutputData.VisualElements)
             {
-                var glyphRuns = textElement.Element
-                                           .GetIndexedGlyphRuns()
-                                           .Where(x => x.TextSourceCharacterIndex < caretPosition &&
-                                                       x.TextSourceCharacterIndex + x.TextSourceLength >= caretPosition);
-
-                // These glyphs trap the caret
-                foreach (var glyphRun in glyphRuns)
+                if (visualElement.Position.SourceOffset <= characterOffset &&
+                    visualElement.Position.SourceOffset + visualElement.Length > characterOffset)
                 {
-                    result.X = Math.Max(result.X, textElement.Position.VisualBounds.X + textElement.Element.WidthIncludingTrailingWhitespace);
-                    result.Y = (textElement.Position.VisualLineNumber - 1) * textElement.Element.TextHeight;
-                    result.Width = 2;
-                    result.Height = textElement.Element.TextHeight;
+                    // Reutrn the offset for the requested character
+                    return new TextPosition(characterOffset,
+                                            visualElement.Position.SourceLineNumber,
+                                            0,
+                                            visualElement.Position.VisualLineNumber,
+                                            visualElement.Position.ParagraphNumber);
                 }
             }
 
-            if (result == Rect.Empty)
+            // Default, return the last visual elment's Top-Right corner
+            return _lastOutputData.VisualElements.Last().Position;
+        }
+
+        /// <summary>
+        /// Returns the line height for a given visual line (this is MSFT's TextHeight, line height usually refers
+        /// to a multiplier to the text height, so it's usually set to 1.0D.
+        /// </summary>
+        public double GetVisualLineHeight(int visualLineNumber)
+        {
+            if (_lastOutputData == null)
+                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
+
+            var visualElement = _lastOutputData.VisualElements
+                                               .FirstOrDefault(x => x.Position.VisualLineNumber == visualLineNumber);
+
+            if (visualElement == null)
+                throw new Exception("Invalid visual line number");
+
+            return visualElement.Element.TextHeight;
+        }
+
+        /// <summary>
+        /// Returns the top left point of the visual offset fromt he character offset. This top-left corner of the character's glyph, 
+        /// or the top-left corner of the caret UI location. If getTrailingCaretPosition is set to true, then the point will return
+        /// from the final glyph location's top-right corner, or a (0,0) point for an empty text source.
+        /// </summary>
+        /// <param name="characterOffset">Offset of the character in the text source</param>
+        public Point CharacterOffsetToVisualOffset(int characterOffset, bool getTrailingCaretPosition = false)
+        {
+            if (_lastOutputData == null)
+                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
+
+            if (characterOffset < 0 ||
+                characterOffset >= _lastOutputData.SourceLength &&
+                !getTrailingCaretPosition)
+                throw new ArgumentOutOfRangeException();
+
+            // Verify Caret Position:  [0, Length], (not) [0, Length) (we only allow one character overflow)
+            //
+            if (characterOffset > _lastOutputData.SourceLength)
+                throw new ArgumentOutOfRangeException();
+
+            foreach (var visualElement in _lastOutputData.VisualElements)
             {
-                result.X = 0;
-                result.Y = lineHeight * (lastOutput.VisualElements.Count() - 1);
-                result.Width = 2;
-                result.Height = lineHeight;
+                if (visualElement.Position.SourceOffset <= characterOffset &&
+                    visualElement.Position.SourceOffset + visualElement.Length > characterOffset)
+                {
+                    // Get glyph run(s) for this element (there is typically only one actual glyph run per line)
+                    foreach (var glyphRun in visualElement.Element.GetIndexedGlyphRuns())
+                    {
+                        if (glyphRun.TextSourceCharacterIndex <= characterOffset &&
+                            glyphRun.TextSourceCharacterIndex + glyphRun.TextSourceLength > characterOffset)
+                        {
+                            // Reutrn the offset for the requested character
+                            var width = glyphRun.GlyphRun.AdvanceWidths.Sum(visualElement.Position.SourceOffset, characterOffset, x => x);
+
+                            // Set result to top-left of the character offset
+                            return new Point(width, visualElement.Position.VisualBounds.Top);
+                        }
+                    }
+                }
             }
 
-            return result;
+            // NEXT CARET: return the last visual elment's Top-Right corner
+            if (getTrailingCaretPosition)
+                return _lastOutputData.VisualElements.Last().Position.VisualBounds.TopRight;
+
+            else
+                throw new Exception("Caret position not found! Unable to find proper glyph offset");
         }
     }
 }

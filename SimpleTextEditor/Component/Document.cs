@@ -32,6 +32,10 @@ namespace SimpleTextEditor.Component
         }
 
         #region (public) IDocument Methods
+        public void Initialize(Size constraintSize)
+        {
+            _visualCore.Initialize(constraintSize);
+        }
         public void Load(string text)
         {
             _visualCore.AppendText(text);
@@ -45,7 +49,11 @@ namespace SimpleTextEditor.Component
                 _visualOutputData.SourceLength == _visualCore.GetTextLength())
                 return _visualOutputData.DesiredSize;
 
-            _visualOutputData = _visualCore.Measure(constraint);
+            // Update size on the backend
+            _visualCore.UpdateSize(constraint);
+
+            // Retrieve update data
+            _visualOutputData = _visualCore.GetOutput();
 
             return _visualOutputData.DesiredSize;
         }

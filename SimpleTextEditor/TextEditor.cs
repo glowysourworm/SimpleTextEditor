@@ -71,6 +71,8 @@ namespace SimpleTextEditor
                                      Brushes.CadetBlue,
                                      TextWrapping.Wrap);
 
+            _document.Initialize(this.RenderSize);
+
             InvalidateVisual();
         }
 

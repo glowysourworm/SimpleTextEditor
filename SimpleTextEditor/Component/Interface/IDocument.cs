@@ -30,6 +30,7 @@ namespace SimpleTextEditor.Component.Interface
         Size Measure(Size availableSize);
         Rect GetCaretBounds();
 
+        void Initialize(Size constraintSize);
         void Load(string text);
         void Clear();
     }
