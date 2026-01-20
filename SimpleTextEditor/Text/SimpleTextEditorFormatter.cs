@@ -101,6 +101,11 @@ namespace SimpleTextEditor.Text
             var desiredHeight = 0D;
             var desiredWidth = 0D;
 
+            // MSFT Advance Text Formatting: This can be tracked after it's understood how to use the EOL!
+            //
+            // 1) EOL text elements are added for each EOL character ('\r')
+            // 2) EOP text elements are added ONLY for paragraph breaks, (AND) (ONE EXTRA ITERATION) (see SimpleTextRunProvider.cs)
+            //
             while (characterOffset <= _textSource.GetLength())
             {
                 // Pretty sure this will be for text wrapping! (see the TextSource for how EOL works)
