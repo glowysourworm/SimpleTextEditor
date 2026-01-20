@@ -2,8 +2,8 @@
 using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
-using SimpleTextEditor.Component;
-using SimpleTextEditor.Component.Interface;
+using SimpleTextEditor.Model;
+using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Visualization;
 
@@ -33,7 +33,7 @@ namespace SimpleTextEditor.Text
         // Supposedly helps improve performance
         readonly TextRunCache _textRunCache;
 
-        public SimpleTextEditorFormatter(ITextRunProvider textRunProvider, ITextSource textSource, SimpleCaretTracker caretTracker, SimpleTextVisualInputData visualInputData)
+        public SimpleTextEditorFormatter(ITextRunProvider textRunProvider, ITextSource textSource, SimpleTextVisualInputData visualInputData)
         {
             _formatter = TextFormatter.Create(TextFormattingMode.Display);
             _visualInputData = visualInputData;
@@ -139,11 +139,16 @@ namespace SimpleTextEditor.Text
                 if (lastLineBreak != null)
                     throw new Exception("Unhandled Line break detected!");
 
+                // EOL / Line Breaks
+                var startEOL = (textElement.Length == 1) && (textEOL > 0);
+                var endEOL = _textSource.GetLength() > 0 && (_textSource.Get().Get().Last() == '\r') && (textEOL > 0);
+
                 // Text Position
-                var textPosition = new TextElementPosition(textVisualBounds, characterOffset, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
+                var startPosition = new TextPosition(characterOffset, textElements.Count, startEOL, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
+                var endPosition = new TextPosition(characterOffset + textElement.Length - 1, textElements.Count, endEOL, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
 
                 // Next Element
-                textElements.Add(new SimpleTextElement(textElement, textPosition));
+                textElements.Add(new SimpleTextElement(textElement, textVisualBounds, startPosition, endPosition));
 
                 // Increment Indices
                 characterOffset += textElement.Length;
@@ -163,31 +168,62 @@ namespace SimpleTextEditor.Text
             return _lastOutputData;
         }
 
-        public ITextPosition CharacterOffsetToTextPosition(int characterOffset)
+        public ITextPosition CharacterOffsetToTextPosition(int characterOffset, bool isAppendPosition)
         {
             if (_lastOutputData == null)
                 throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
 
-            if (characterOffset < 0 ||
-                characterOffset >= _lastOutputData.SourceLength)
-                throw new ArgumentOutOfRangeException();
-
-            foreach (var visualElement in _lastOutputData.VisualElements)
+            if (isAppendPosition)
             {
-                if (visualElement.Position.SourceOffset <= characterOffset &&
-                    visualElement.Position.SourceOffset + visualElement.Length > characterOffset)
-                {
-                    // Reutrn the offset for the requested character
-                    return new TextPosition(characterOffset,
-                                            visualElement.Position.SourceLineNumber,
-                                            0,
-                                            visualElement.Position.VisualLineNumber,
-                                            visualElement.Position.ParagraphNumber);
-                }
+                if (characterOffset < 0 ||
+                   (characterOffset > _lastOutputData.SourceLength))
+                    throw new ArgumentOutOfRangeException();
             }
 
-            // Default, return the last visual elment's Top-Right corner
-            return _lastOutputData.VisualElements.Last().Position;
+            else
+            {
+                if (characterOffset < 0 ||
+                    characterOffset >= _lastOutputData.SourceLength)
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            if (!isAppendPosition)
+            {
+                foreach (var visualElement in _lastOutputData.VisualElements)
+                {
+                    if (visualElement.Contains(characterOffset))
+                    {
+                        // Reutrn the offset for the requested character
+                        return new TextPosition(characterOffset,
+                                                visualElement.Start.ElementIndex,
+                                                visualElement.Start.IsAtEndOfLine,
+                                                visualElement.Start.SourceLineNumber,
+                                                0,
+                                                visualElement.Start.VisualLineNumber,
+                                                visualElement.Start.ParagraphNumber);
+                    }
+                }
+
+                throw new Exception("Character offset not found!");
+            }
+            else
+            {
+                foreach (var visualElement in _lastOutputData.VisualElements)
+                {
+                    if (visualElement.Contains(characterOffset))
+                    {
+                        return new TextPosition(characterOffset,
+                                                visualElement.Start.ElementIndex,
+                                                characterOffset == visualElement.End.SourceOffset,
+                                                visualElement.Start.SourceLineNumber,
+                                                visualElement.Start.VisualColumn,
+                                                visualElement.Start.VisualLineNumber,
+                                                visualElement.Start.ParagraphNumber);
+                    }
+                }
+
+                return _lastOutputData.VisualElements.Last().End;
+            }
         }
 
         /// <summary>
@@ -200,7 +236,7 @@ namespace SimpleTextEditor.Text
                 throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
 
             var visualElement = _lastOutputData.VisualElements
-                                               .FirstOrDefault(x => x.Position.VisualLineNumber == visualLineNumber);
+                                               .FirstOrDefault(x => x.Start.VisualLineNumber == visualLineNumber);
 
             if (visualElement == null)
                 throw new Exception("Invalid visual line number");
@@ -213,7 +249,7 @@ namespace SimpleTextEditor.Text
         /// text block, 2) Inside of the text block would return the closest glyph position, 3) After the
         /// text block would return the last glyph's position.
         /// </summary>
-        public ITextPosition VisualPointToTextPosition(Point point)
+        public ITextPosition VisualPointToTextPosition(Point point, out bool isAppendPosition)
         {
             if (_lastOutputData == null)
                 throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
@@ -221,36 +257,35 @@ namespace SimpleTextEditor.Text
             if (!_lastOutputData.VisualElements.Any())
                 throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
 
+            isAppendPosition = false;
+
             // ENTIRE TEXT BOUNDS
-            var lastRectangle = new Rect(_lastOutputData.DesiredSize);
+            var lastRectangle = new Rect(_lastOutputData.ConstraintSize);
 
             if (point.Y <= lastRectangle.Top || point.X <= lastRectangle.Left)
-                return _lastOutputData.VisualElements.First().Position;
+                return _lastOutputData.VisualElements.First().Start;
 
             else if (point.Y >= lastRectangle.Bottom || point.X >= lastRectangle.Right)
-                return _lastOutputData.VisualElements.Last().Position;
+            {
+                isAppendPosition = true;
+
+                return _lastOutputData.VisualElements.Last().End;
+            }
+
 
             // LINE BOUNDS
             else
             {
                 // Containing Text Element
-                var textElement = _lastOutputData.VisualElements.FirstOrDefault(x => x.Position.VisualBounds.Contains(point));
+                var textElement = _lastOutputData.VisualElements
+                                                 .FirstOrDefault(x => x.VisualBounds.Top <= point.Y && x.VisualBounds.Bottom >= point.Y);
 
                 // None -> Take closest line of text
                 if (textElement == null)
                 {
-                    textElement = _lastOutputData.VisualElements.FirstOrDefault(x => x.Position.VisualBounds.Top <= point.Y &&
-                                                                                     x.Position.VisualBounds.Bottom >= point.Y);
+                    isAppendPosition = true;
 
-                    if (textElement == null)
-                        throw new Exception("SimpleTextEditorFormatter unable to locate text element for provided point!");
-
-                    else
-                        return new TextPosition(textElement.Position.SourceOffset + textElement.Length - 1,
-                                                textElement.Position.SourceLineNumber,
-                                                textElement.Position.VisualColumn,
-                                                textElement.Position.VisualLineNumber,
-                                                textElement.Position.ParagraphNumber);
+                    return _lastOutputData.VisualElements.Last().End;
                 }
 
                 // Search glyph run to see where point lies
@@ -261,16 +296,19 @@ namespace SimpleTextEditor.Text
                 {
                     foreach (var advanceWidth in glyphRun.GlyphRun.AdvanceWidths)
                     {
-                        if (textElement.Position.SourceOffset + currentIndex >= _textSource.GetLength())
-                            throw new Exception();
-
                         // Found Text Position
-                        if (textElement.Position.VisualBounds.Left + currentWidth >= point.X)
-                            return new TextPosition(textElement.Position.SourceOffset + currentIndex,
-                                                    textElement.Position.SourceLineNumber,
-                                                    textElement.Position.VisualColumn,
-                                                    textElement.Position.VisualLineNumber,
-                                                    textElement.Position.ParagraphNumber);
+                        if (textElement.VisualBounds.Left + currentWidth >= point.X)
+                        {
+                            isAppendPosition = (textElement.Start.SourceOffset + currentIndex) == textElement.End.SourceOffset;
+
+                            return new TextPosition(textElement.Start.SourceOffset + currentIndex,
+                                                    textElement.Start.ElementIndex,
+                                                    isAppendPosition,
+                                                    textElement.Start.SourceLineNumber,
+                                                    textElement.Start.VisualColumn,
+                                                    textElement.Start.VisualLineNumber,
+                                                    textElement.Start.ParagraphNumber);
+                        }
 
                         currentIndex++;
                         currentWidth += advanceWidth;
@@ -279,58 +317,49 @@ namespace SimpleTextEditor.Text
 
                 //throw new Exception("SimpleTextEditorFormatter unable to locate text element for provided point!");
 
-                return _lastOutputData.VisualElements.Last().Position;
+                isAppendPosition = true;
+
+                return textElement.End;
             }
         }
 
         /// <summary>
-        /// Returns the top left point of the visual offset fromt he character offset. This top-left corner of the character's glyph, 
-        /// or the top-left corner of the caret UI location. If getTrailingCaretPosition is set to true, then the point will return
-        /// from the final glyph location's top-right corner, or a (0,0) point for an empty text source.
+        /// Returns the top left point of the visual offset from the character offset. If append position is set, then
+        /// the EOL position is taken, which is calculated from the line's text element(s).
         /// </summary>
-        /// <param name="characterOffset">Offset of the character in the text source</param>
-        public Point CharacterOffsetToVisualOffset(int characterOffset, bool getTrailingCaretPosition = false)
+        public Point CharacterOffsetToVisualOffset(int characterOffset, bool isAppendPosition)
         {
-            if (_lastOutputData == null)
-                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
+            // Character -> ITextPosition
+            var position = CharacterOffsetToTextPosition(characterOffset, isAppendPosition);
 
-            if (characterOffset < 0 ||
-                characterOffset >= _lastOutputData.SourceLength &&
-                !getTrailingCaretPosition)
-                throw new ArgumentOutOfRangeException();
+            // Get ITextElement from collection
+            var visualElement = _lastOutputData.GetElement(position.ElementIndex);
+            var positionX = 0D;
 
-            // Verify Caret Position:  [0, Length], (not) [0, Length) (we only allow one character overflow)
-            //
-            if (characterOffset > _lastOutputData.SourceLength && getTrailingCaretPosition)
-                throw new ArgumentOutOfRangeException();
-
-            foreach (var visualElement in _lastOutputData.VisualElements)
+            // Get glyph run(s) for this element (there is typically only one actual glyph run per line)
+            foreach (var glyphRun in visualElement.Element.GetIndexedGlyphRuns())
             {
-                if (visualElement.Position.SourceOffset <= characterOffset &&
-                    visualElement.Position.SourceOffset + visualElement.Length > characterOffset)
+                // Prepend
+                if (glyphRun.TextSourceCharacterIndex < characterOffset)
                 {
-                    // Get glyph run(s) for this element (there is typically only one actual glyph run per line)
-                    foreach (var glyphRun in visualElement.Element.GetIndexedGlyphRuns())
+                    // Reutrn the offset for the requested character
+                    for (int index = 0; index < glyphRun.GlyphRun.AdvanceWidths.Count &&
+                                        index + visualElement.Start.SourceOffset < characterOffset; index++)
                     {
-                        if (glyphRun.TextSourceCharacterIndex <= characterOffset &&
-                            glyphRun.TextSourceCharacterIndex + glyphRun.TextSourceLength > characterOffset)
-                        {
-                            // Reutrn the offset for the requested character
-                            var width = glyphRun.GlyphRun.AdvanceWidths.Sum(visualElement.Position.SourceOffset, characterOffset, x => x);
-
-                            // Set result to top-left of the character offset
-                            return new Point(width, visualElement.Position.VisualBounds.Top);
-                        }
+                        positionX += glyphRun.GlyphRun.AdvanceWidths[index];
                     }
                 }
             }
 
-            // NEXT CARET: return the last visual elment's Top-Right corner
-            if (getTrailingCaretPosition)
-                return _lastOutputData.VisualElements.Last().Position.VisualBounds.TopRight;
+            // Character Position (Insert)
+            if (!isAppendPosition)
+                return new Point(positionX, visualElement.VisualBounds.Top);
 
+            // Append Position: EOL, or top-right character position if it is at the end of the line
             else
-                throw new Exception("Caret position not found! Unable to find proper glyph offset");
+            {
+                return visualElement.VisualBounds.TopRight;
+            }
         }
     }
 }

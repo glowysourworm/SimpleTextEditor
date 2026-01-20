@@ -3,6 +3,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 
 using SimpleTextEditor.Model;
+using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Visualization;
 
@@ -22,8 +23,8 @@ namespace SimpleTextEditor.Text
         // Primary text store
         SimpleTextRunProvider _textRunProvider;
 
-        // Primary text caret source
-        SimpleCaretTracker _caretTracker;
+        // Primary caret source
+        Caret _caret;
 
         // MSFT Advanced text formatting
         SimpleTextEditorFormatter _formatter;
@@ -44,8 +45,8 @@ namespace SimpleTextEditor.Text
             _visualInputData = new SimpleTextVisualInputData(fontFamily, fontSize, foreground, background, highlightForeground, highlightBackground, textWrapping);
             _textSource = new LinearTextSource(_visualInputData.GetProperties(TextPropertySet.Normal));
             _textRunProvider = new SimpleTextRunProvider(_textSource);
-            _caretTracker = new SimpleCaretTracker();
-            _formatter = new SimpleTextEditorFormatter(_textRunProvider, _textSource, _caretTracker, _visualInputData);
+            _caret = new Caret(0, Rect.Empty, true);
+            _formatter = new SimpleTextEditorFormatter(_textRunProvider, _textSource, _visualInputData);
 
             _initialized = false;
             _invalid = true;
@@ -78,7 +79,7 @@ namespace SimpleTextEditor.Text
             _formatter.MeasureText(_constraintSize);
 
             // Set caret position to the trailing (OVERFLOW) position
-            UpdateCaret(_textSource.GetLength());
+            UpdateCaret(_textSource.GetLength(), true);
 
             _invalid = false;
         }
@@ -88,12 +89,7 @@ namespace SimpleTextEditor.Text
             if (!_initialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            var caretPosition = _caretTracker.GetCaretPosition();
-
-            if (caretPosition == null)
-                return new Rect();
-
-            return caretPosition.VisualBounds;
+            return _caret.VisualBounds;
         }
 
         public string GetTextCopy()
@@ -119,7 +115,7 @@ namespace SimpleTextEditor.Text
             _formatter.MeasureText(_constraintSize);
 
             // Update Caret to trail insert text
-            UpdateCaret(offset + text.Length);
+            UpdateCaret(offset, false);
 
             _invalid = false;
         }
@@ -165,7 +161,7 @@ namespace SimpleTextEditor.Text
             _formatter.MeasureText(_constraintSize);
 
             // Update Caret to trail insert text
-            UpdateCaret(offset);
+            UpdateCaret(offset, offset == _textSource.GetLength());
 
             _invalid = false;
         }
@@ -195,10 +191,11 @@ namespace SimpleTextEditor.Text
                 if (mouseData.MouseDownLocation == null ||
                     mouseData.MouseDownLocation.Value.Equals(mouseData.MouseLocation))
                 {
-                    var textPosition = _formatter.VisualPointToTextPosition(mouseData.MouseLocation);
+                    var isAppendPosition = false;
+                    var textPosition = _formatter.VisualPointToTextPosition(mouseData.MouseLocation, out isAppendPosition);
 
                     // Move Caret
-                    UpdateCaret(textPosition.SourceOffset + 1);
+                    UpdateCaret(textPosition, isAppendPosition);
 
                     // Clear Selection
                     _textSource.ClearProperties();
@@ -207,8 +204,9 @@ namespace SimpleTextEditor.Text
                 // Click Drag
                 else
                 {
-                    var textPosition1 = _formatter.VisualPointToTextPosition(mouseData.MouseDownLocation.Value);
-                    var textPosition2 = _formatter.VisualPointToTextPosition(mouseData.MouseLocation);
+                    var isAppendPosition = false;
+                    var textPosition1 = _formatter.VisualPointToTextPosition(mouseData.MouseDownLocation.Value, out isAppendPosition);
+                    var textPosition2 = _formatter.VisualPointToTextPosition(mouseData.MouseLocation, out isAppendPosition);
                     var startIndex = Math.Min(textPosition1.SourceOffset, textPosition2.SourceOffset);
                     var endIndex = Math.Max(textPosition1.SourceOffset, textPosition2.SourceOffset);
                     var selectRange = IndexRange.FromIndices(startIndex, endIndex);
@@ -224,25 +222,31 @@ namespace SimpleTextEditor.Text
         }
 
         /// <summary>
-        /// Caret position is always one greater than previous text. So, it OVERFLOWS BY ONE.
+        /// Caret position may be one greater than previous text, putting it in the visual line's "append position"
         /// </summary>
-        /// <param name="caretPosition">1 + offset to source character, or equal to the total text source length!</param>
-        private void UpdateCaret(int caretPosition)
+        private void UpdateCaret(int caretOffset, bool isAppendPosition)
         {
-            if (caretPosition < 1)
-                throw new ArgumentException("Caret Position is a special index which must be >= 1");
+            if (caretOffset > _textSource.GetLength() || caretOffset < 0)
+                throw new ArgumentException("Caret offset is out of bounds");
 
             // Update Caret Position
-            var caretOrigin = _formatter.CharacterOffsetToVisualOffset(caretPosition, true);
-            var textPosition = _formatter.CharacterOffsetToTextPosition(caretPosition - 1);
+            var caretOrigin = _formatter.CharacterOffsetToVisualOffset(caretOffset, isAppendPosition);
+            var textPosition = _formatter.CharacterOffsetToTextPosition(caretOffset, isAppendPosition);
             var textHeight = _formatter.GetVisualLineHeight(textPosition.VisualLineNumber);
 
-            _caretTracker.Update(new Rect(caretOrigin, new Size(2, textHeight)),
-                                 caretPosition,
-                                 textPosition.SourceLineNumber,
-                                 textPosition.VisualColumn,
-                                 textPosition.VisualLineNumber,
-                                 textPosition.ParagraphNumber);
+            _caret.Update(caretOffset, new Rect(caretOrigin, new Size(2, textHeight)), isAppendPosition);
+        }
+
+        /// <summary>
+        /// Caret position may be one greater than previous text, putting it in the visual line's "append position"
+        /// </summary>
+        private void UpdateCaret(ITextPosition textPosition, bool isAppendPosition)
+        {
+            // Update Caret Position
+            var caretOrigin = _formatter.CharacterOffsetToVisualOffset(textPosition.SourceOffset, isAppendPosition);
+            var textHeight = _formatter.GetVisualLineHeight(textPosition.VisualLineNumber);
+
+            _caret.Update(textPosition.SourceOffset, new Rect(caretOrigin, new Size(2, textHeight)), isAppendPosition);
         }
     }
 }

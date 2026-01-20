@@ -1,6 +1,8 @@
-﻿using System.Windows.Media.TextFormatting;
+﻿using System.Windows;
+using System.Windows.Media.TextFormatting;
 
-using SimpleTextEditor.Component.Interface;
+using SimpleTextEditor.Model.Interface;
+using SimpleTextEditor.Text.Interface;
 
 namespace SimpleTextEditor.Text.Visualization
 {
@@ -8,22 +10,31 @@ namespace SimpleTextEditor.Text.Visualization
     /// Container for MSFT (abstract) TextLine, which carries data linking the visualization of
     /// the text source, and the actual text source.
     /// </summary>
-    public class SimpleTextElement
+    public class SimpleTextElement : ITextElement
     {
-        // Visual text line provided by the formatter
-        TextLine _textElement;
+        public ITextPosition Start { get; }
+        public ITextPosition End { get; }
+        public TextLine Element { get; }
+        public Rect VisualBounds { get; }
+        public int Length { get; }
 
-        // Position of the line (source and visual) (also has line data)
-        ITextElementPosition _position;
-
-        public TextLine Element { get { return _textElement; } }
-        public ITextElementPosition Position { get { return _position; } }
-        public int Length { get { return _textElement.Length; } }
-
-        public SimpleTextElement(TextLine textElement, ITextElementPosition position)
+        public SimpleTextElement(TextLine textElement, Rect visualBounds, ITextPosition startPosition, ITextPosition endPosition)
         {
-            _textElement = textElement;
-            _position = position;
+            this.Start = startPosition;
+            this.End = endPosition;
+            this.VisualBounds = visualBounds;
+            this.Element = textElement;
+            this.Length = this.End.SourceOffset - this.Start.SourceOffset + 1;
+        }
+
+        public bool Contains(ITextPosition position)
+        {
+            return this.Start.SourceOffset <= position.SourceOffset && this.End.SourceOffset >= position.SourceOffset;
+        }
+
+        public bool Contains(int offset)
+        {
+            return this.Start.SourceOffset <= offset && this.End.SourceOffset >= offset;
         }
     }
 }

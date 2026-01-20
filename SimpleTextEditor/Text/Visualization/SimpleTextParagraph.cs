@@ -22,10 +22,10 @@
 
         public void AddLine(SimpleTextElement line)
         {
-            if (line.Position.ParagraphNumber != _paragraphNumber)
+            if (line.Start.ParagraphNumber != _paragraphNumber)
                 throw new ArgumentException("Mismatching paragraph numbers!");
 
-            _lines.Add(line.Position.VisualLineNumber, line);
+            _lines.Add(line.Start.VisualLineNumber, line);
         }
         public SimpleTextElement GetLine(int visualLineNumber)
         {
