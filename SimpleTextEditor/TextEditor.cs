@@ -49,14 +49,12 @@ namespace SimpleTextEditor
         IDocument? _document;
 
         Point? _mouseDownPoint;
-        Rect _mouseSelectionRect;
 
         public TextEditor()
         {
             this.Cursor = Cursors.IBeam;
 
             _document = null;
-            _mouseSelectionRect = new Rect();
 
             this.Loaded += TextEditor_Loaded;
         }
@@ -69,7 +67,7 @@ namespace SimpleTextEditor
                                      Brushes.Transparent,
                                      Brushes.White,
                                      Brushes.CadetBlue,
-                                     TextWrapping.Wrap);
+                                     TextWrapping.NoWrap);
 
             _document.Initialize(this.RenderSize);
 
@@ -104,8 +102,8 @@ namespace SimpleTextEditor
             else
             {
                 // Add Control Padding
-                constraint.Width -= (this.Padding.Left + this.Padding.Right);
-                constraint.Height -= (this.Padding.Top + this.Padding.Bottom);
+                //constraint.Width -= (this.Padding.Left + this.Padding.Right);
+                //constraint.Height -= (this.Padding.Top + this.Padding.Bottom);
 
                 // Efficiency check is built into the Document implementation
                 var desiredSize = _document.Measure(constraint);
@@ -199,39 +197,33 @@ namespace SimpleTextEditor
             if (e.LeftButton == MouseButtonState.Pressed)
                 _mouseDownPoint = e.GetPosition(this);
 
-            if (this.IsFocused)
-                return;
+            var invalidate = !this.IsFocused || _document.ProcessMouseInput(new MouseData()
+            {
+                LeftButton = e.LeftButton,
+                MouseLocation = e.GetPosition(this),
+                MouseDownLocation = _mouseDownPoint
+            });
 
             // Does not focus by default
-            this.Focus();
+            if (!this.IsFocused)
+                this.Focus();
 
-            InvalidateVisual();
+            if (invalidate)
+                InvalidateVisual();
         }
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
 
-            if (_mouseDownPoint != null)
+            var invalidate = _document.ProcessMouseInput(new MouseData()
             {
-                var point = e.GetPosition(this);
-                var left = Math.Min(_mouseDownPoint.Value.X, point.X);
-                var top = Math.Min(_mouseDownPoint.Value.Y, point.Y);
-                var right = Math.Max(_mouseDownPoint.Value.X, point.X);
-                var bottom = Math.Max(_mouseDownPoint.Value.Y, point.Y);
+                LeftButton = e.LeftButton,
+                MouseLocation = e.GetPosition(this),
+                MouseDownLocation = _mouseDownPoint
+            });
 
-                _mouseSelectionRect.X = left;
-                _mouseSelectionRect.Y = top;
-                _mouseSelectionRect.Width = right - left;
-                _mouseSelectionRect.Height = bottom - top;
-
-                _document.ProcessMouseInput(new MouseData()
-                {
-                    LeftButton = e.LeftButton,
-                    SelectionBounds = _mouseSelectionRect
-                });
-
+            if (invalidate)
                 InvalidateVisual();
-            }
         }
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
@@ -265,13 +257,14 @@ namespace SimpleTextEditor
             drawingContext.DrawRectangle(background, new Pen(border, this.BorderThickness.Top), new Rect(this.RenderSize));
 
             var caretBounds = _document.GetCaretBounds();
-            var constraint = new Size(this.RenderSize.Width - this.Padding.Left - this.Padding.Right,
-                                      this.RenderSize.Height - this.Padding.Top - this.Padding.Bottom);
-            var position = new Point(0, this.Padding.Top);
+            //var constraint = new Size(this.RenderSize.Width - this.Padding.Left - this.Padding.Right,
+            //                          this.RenderSize.Height - this.Padding.Top - this.Padding.Bottom);
+            //var position = new Point(0, this.Padding.Top);
+            var position = new Point(0, 0);
 
             foreach (var visualLine in _document.GetVisualElements())
             {
-                position.X = visualLine.Element.Start + this.Padding.Left;
+                position.X = visualLine.Element.Start;
                 position.Y += visualLine.Element.TextHeight;
 
                 visualLine.Element.Draw(drawingContext, position, InvertAxes.None);
@@ -279,8 +272,8 @@ namespace SimpleTextEditor
 
             if (caretBounds.Height > 0)
             {
-                caretBounds.X += this.Padding.Left + 2; // KLUDGE
-                caretBounds.Y += this.Padding.Top + 2;
+                //caretBounds.X += this.Padding.Left + 2; // KLUDGE
+                //caretBounds.Y += this.Padding.Top + 2;
 
                 drawingContext.DrawRectangle(caret, null, caretBounds);
             }

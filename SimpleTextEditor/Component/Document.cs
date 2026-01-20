@@ -11,9 +11,6 @@ namespace SimpleTextEditor.Component
 {
     public class Document : IDocument
     {
-        // Last measurement data
-        SimpleTextVisualOutputData? _visualOutputData;
-
         // Carries the primary text source
         readonly ITextVisualCore _visualCore;
 
@@ -28,7 +25,6 @@ namespace SimpleTextEditor.Component
                         TextWrapping textWrapping)
         {
             _visualCore = new SimpleTextVisualCore(fontFamily, fontSize, foreground, background, highlightForeground, highlightBackground, textWrapping);
-            _visualOutputData = null;
         }
 
         #region (public) IDocument Methods
@@ -42,20 +38,11 @@ namespace SimpleTextEditor.Component
         }
         public Size Measure(Size constraint)
         {
-            // Trying to reduce measurement cost
-            if (_visualOutputData != null &&
-                _visualOutputData.DesiredSize.Width <= constraint.Width &&
-                _visualOutputData.DesiredSize.Height <= constraint.Height &&
-                _visualOutputData.SourceLength == _visualCore.GetTextLength())
-                return _visualOutputData.DesiredSize;
-
             // Update size on the backend
             _visualCore.UpdateSize(constraint);
 
-            // Retrieve update data
-            _visualOutputData = _visualCore.GetOutput();
-
-            return _visualOutputData.DesiredSize;
+            // This will force a measure pass if it hasn't run already
+            return _visualCore.GetOutput().DesiredSize;
         }
         public Rect GetCaretBounds()
         {
@@ -93,9 +80,9 @@ namespace SimpleTextEditor.Component
                     throw new Exception("Unhandled ControlInput Type");
             }
         }
-        public void ProcessMouseInput(MouseData mouseData)
+        public bool ProcessMouseInput(MouseData mouseData)
         {
-            _visualCore.SetMouseInfo(mouseData);
+            return _visualCore.SetMouseInfo(mouseData);
         }
         public void ProcessInputText(string inputText)
         {
@@ -107,7 +94,8 @@ namespace SimpleTextEditor.Component
         }
         public IEnumerable<SimpleTextElement> GetVisualElements()
         {
-            return _visualOutputData == null ? new List<SimpleTextElement>() : _visualOutputData.VisualElements;
+            // Will force a measurement pass if it hasn't run already.
+            return _visualCore.GetOutput().VisualElements;
         }
         public void Clear()
         {
@@ -118,23 +106,23 @@ namespace SimpleTextEditor.Component
         #region (private) UI <--> ITextVisualCore Methods
         private int GetTextOffsetFromUI(Point pointUI)
         {
-            if (_visualOutputData != null)
-            {
-                foreach (var element in _visualOutputData.VisualElements)
-                {
-                    // Get Text Bounds: For this element (NOT SURE ABOUT POSITION!)
-                    //var textBounds = element.Element.GetTextBounds(element.Position.SourceOffset, element.Length);
+            //if (_visualOutputData != null)
+            //{
+            //    foreach (var element in _visualOutputData.VisualElements)
+            //    {
+            //        // Get Text Bounds: For this element (NOT SURE ABOUT POSITION!)
+            //        //var textBounds = element.Element.GetTextBounds(element.Position.SourceOffset, element.Length);
 
-                    var textBounds = element.Position.VisualBounds;
+            //        var textBounds = element.Position.VisualBounds;
 
-                    //var index = textBounds.SelectMany(x => x.TextRunBounds)
-                    //                      .FirstOrDefault(x => x.Rectangle.Contains(pointUI))
-                    //                      ?.TextSourceCharacterIndex ?? -1;
+            //        //var index = textBounds.SelectMany(x => x.TextRunBounds)
+            //        //                      .FirstOrDefault(x => x.Rectangle.Contains(pointUI))
+            //        //                      ?.TextSourceCharacterIndex ?? -1;
 
-                    if (textBounds.Contains(pointUI))
-                        return element.Position.SourceOffset;
-                }
-            }
+            //        if (textBounds.Contains(pointUI))
+            //            return element.Position.SourceOffset;
+            //    }
+            //}
 
             return -1;
         }

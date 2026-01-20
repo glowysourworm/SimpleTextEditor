@@ -4,6 +4,13 @@ namespace SimpleTextEditor.Model
 {
     public class IndexRange
     {
+        /// <summary>
+        /// Recalls the static instance of an empty IndexRange. This is initialized to (-1,-1) which will
+        /// even avoid value equality using the Equals method, which is not needed to do. The operators
+        /// == and != are overloaded to check instance equality for using IndexRange.Empty.
+        /// </summary>
+        public static IndexRange Empty = new IndexRange(-1, -1);
+
         public int StartIndex { get; private set; }
         public int EndIndex { get; private set; }
         public int Count { get { return this.EndIndex - this.StartIndex + 1; } }
@@ -117,6 +124,15 @@ namespace SimpleTextEditor.Model
             }
 
             return null;
+        }
+
+        public static bool operator ==(IndexRange instance1, IndexRange instance2)
+        {
+            return ReferenceEquals(instance1, instance2);
+        }
+        public static bool operator !=(IndexRange instance1, IndexRange instance2)
+        {
+            return !ReferenceEquals(instance1, instance2);
         }
 
         public override bool Equals(object? obj)

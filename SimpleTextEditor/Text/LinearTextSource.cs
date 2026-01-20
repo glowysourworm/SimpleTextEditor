@@ -99,6 +99,17 @@ namespace SimpleTextEditor.Text
             return propertiesDict;
         }
 
+        public IndexRange GetNextPropertyRange(int offset, bool includeCurrentOffset)
+        {
+            // NOT INCLUDING
+            var pair = _propertyDict.FirstOrDefault(x => includeCurrentOffset ? x.Key.StartIndex >= offset : x.Key.StartIndex > offset);
+
+            if (pair.Key != null)
+                return pair.Key;
+
+            return IndexRange.Empty;
+        }
+
         public ITextProperties GetProperties(int offset, out int length)
         {
             var pair = _propertyDict.FirstOrDefault(x => x.Key.Contains(offset));
@@ -142,6 +153,11 @@ namespace SimpleTextEditor.Text
 
             // New Properties
             _propertyDict.Add(range, properties);
+        }
+
+        public void ClearProperties()
+        {
+            _propertyDict.Clear();
         }
 
         public IndexRange[] GetPropertySlices()

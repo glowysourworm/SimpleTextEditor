@@ -52,11 +52,8 @@ namespace SimpleTextEditor.Text.Interface
         void UpdateSize(Size contorlSize);
 
         /// <summary>
-        /// Sets mouse information for text selection processing. Returns true if text needs to be invalidated.
+        /// Sets mouse information for text selection processing. Returns true if text was re-formatted.
         /// </summary>
-        /// <param name="topLeft">Top Left with respect to the TextEditor UI</param>
-        /// <param name="bottomRight">Bottom Right with respect to the TextEditor UI</param>
-        /// <param name="leftMouseButton">Left mouse button state</param>
         bool SetMouseInfo(MouseData mouseData);
 
         /// <summary>

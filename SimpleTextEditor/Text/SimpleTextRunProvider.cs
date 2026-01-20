@@ -56,6 +56,10 @@ namespace SimpleTextEditor.Text
             //
             var nextEOLIndex = characterIndex >= _textSource.GetLength() ? -1 : _textSource.Search('\r', characterIndex);
 
+            // Look for alternate properties also
+            //
+            var nextPropertyRange = _textSource.GetNextPropertyRange(characterIndex, false);
+
             // HOW TO SIGNAL EOL FOR A SINGLE TEXT LINE!
             //
             // https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/advanced-text-formatting
@@ -80,7 +84,28 @@ namespace SimpleTextEditor.Text
                 //                 The EOL character will be renedered on the next call to the GetTextRun method, which will get 
                 //                 caught above and return the TextEndOfLine.
                 //
-                var renderLength = nextEOLIndex == -1 ? _textSource.GetLength() - characterIndex : nextEOLIndex - characterIndex;
+                //                 Alternate text run properties are also handled here by checkingh them, next.
+                //
+
+                // Entire Line
+                var renderLength = _textSource.GetLength() - characterIndex;
+
+                // Next Alternate Character Properties
+                if (nextPropertyRange != IndexRange.Empty)
+                {
+                    // EOL happens first
+                    if (nextEOLIndex >= 0 && nextEOLIndex < nextPropertyRange.StartIndex)
+                    {
+                        renderLength = nextEOLIndex - characterIndex;
+                    }
+
+                    else
+                        renderLength = nextPropertyRange.StartIndex - characterIndex;
+                }
+                else if (nextEOLIndex >= 0)
+                {
+                    renderLength = nextEOLIndex - characterIndex;
+                }
 
                 // TextCharacters requires an absolute index into the char[]. There may be a way to utilize char* for 
                 // better (native) performance; but that would take some testing and playing around.

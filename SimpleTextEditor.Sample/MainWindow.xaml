@@ -7,7 +7,7 @@
         <core:TextEditor x:Name="Editor" 
                          FontFamily="Consolas"
                          FontSize="14"
-                         Padding="10"
+                         Padding="0"
                          Background="White"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"

@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Input;
 using System.Windows.Media;
 
 using SimpleTextEditor.Model;
@@ -141,7 +142,7 @@ namespace SimpleTextEditor.Text
             if (!_initialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            var invalidate = !contorlSize.Equals(_constraintSize);
+            var invalidate = !contorlSize.Equals(_constraintSize) || _invalid;
 
             _constraintSize = contorlSize;
 
@@ -179,32 +180,47 @@ namespace SimpleTextEditor.Text
             if (!_initialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            var result = false;
+            // Procedure:  Set click / click-drag events, and let the formatter run on next
+            //             render pass (might have some performance benefit). So, just set
+            //             invalid flag.
+            // 
 
-            //if (_lastVisualOutputData != null)
-            //{
-            //    foreach (var element in _lastVisualOutputData.VisualElements)
-            //    {
-            //        // Intersection
-            //        if (element.Position.VisualBounds.IntersectsWith(mouseData.SelectionBounds))
-            //        {
+            // Nothing to do (no hover events currently)
+            if (mouseData.LeftButton == MouseButtonState.Released)
+                return _invalid;
 
-            //            _textSource.SetProperties(IndexRange.FromStartCount(element.Position.SourceOffset,
-            //                                     element.Length),
-            //                                     _visualInputData.GetProperties(TextPropertySet.Highlighted));
+            else
+            {
+                // Click Event (not click-drag)
+                if (mouseData.MouseDownLocation == null ||
+                    mouseData.MouseDownLocation.Value.Equals(mouseData.MouseLocation))
+                {
+                    var textPosition = _formatter.VisualPointToTextPosition(mouseData.MouseLocation);
 
-            //            _formatter.InvalidateCache();
+                    // Move Caret
+                    UpdateCaret(textPosition.SourceOffset + 1);
 
-            //            result = true;
-            //        }
-            //    }
-            //}
+                    // Clear Selection
+                    _textSource.ClearProperties();
+                }
 
-            //// If it's still the first pass, then the measure will recreate the text runs anyway.
-            //if (_lastVisualOutputData != null)
-            //    _lastVisualOutputData = _formatter.MeasureText(_lastVisualOutputData.ConstraintSize);
+                // Click Drag
+                else
+                {
+                    var textPosition1 = _formatter.VisualPointToTextPosition(mouseData.MouseDownLocation.Value);
+                    var textPosition2 = _formatter.VisualPointToTextPosition(mouseData.MouseLocation);
+                    var startIndex = Math.Min(textPosition1.SourceOffset, textPosition2.SourceOffset);
+                    var endIndex = Math.Max(textPosition1.SourceOffset, textPosition2.SourceOffset);
+                    var selectRange = IndexRange.FromIndices(startIndex, endIndex);
 
-            return result;
+                    _textSource.SetProperties(selectRange, _visualInputData.GetProperties(TextPropertySet.Highlighted));
+                }
+
+                _formatter.InvalidateCache();
+                _invalid = true;
+            }
+
+            return _invalid;
         }
 
         /// <summary>
@@ -213,6 +229,9 @@ namespace SimpleTextEditor.Text
         /// <param name="caretPosition">1 + offset to source character, or equal to the total text source length!</param>
         private void UpdateCaret(int caretPosition)
         {
+            if (caretPosition < 1)
+                throw new ArgumentException("Caret Position is a special index which must be >= 1");
+
             // Update Caret Position
             var caretOrigin = _formatter.CharacterOffsetToVisualOffset(caretPosition, true);
             var textPosition = _formatter.CharacterOffsetToTextPosition(caretPosition - 1);

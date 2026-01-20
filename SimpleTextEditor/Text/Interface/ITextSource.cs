@@ -38,8 +38,18 @@ namespace SimpleTextEditor.Text.Interface
         ITextProperties GetProperties(int offset, out int length);
 
         /// <summary>
+        /// Returns next index range for alternate properties after or equal to the supplied offset
+        /// </summary>
+        IndexRange GetNextPropertyRange(int offset, bool includeCurrentOffset);
+
+        /// <summary>
         /// Sets alternate text properties for a range of text
         /// </summary>
         void SetProperties(IndexRange range, ITextProperties properties);
+
+        /// <summary>
+        /// Clears alternate text properties for the entire text
+        /// </summary>
+        void ClearProperties();
     }
 }

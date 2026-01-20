@@ -209,6 +209,81 @@ namespace SimpleTextEditor.Text
         }
 
         /// <summary>
+        /// Returns the closest ITextPosition for the provided point:  1) Pre-cursor would be above the
+        /// text block, 2) Inside of the text block would return the closest glyph position, 3) After the
+        /// text block would return the last glyph's position.
+        /// </summary>
+        public ITextPosition VisualPointToTextPosition(Point point)
+        {
+            if (_lastOutputData == null)
+                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
+
+            if (!_lastOutputData.VisualElements.Any())
+                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
+
+            // ENTIRE TEXT BOUNDS
+            var lastRectangle = new Rect(_lastOutputData.DesiredSize);
+
+            if (point.Y <= lastRectangle.Top || point.X <= lastRectangle.Left)
+                return _lastOutputData.VisualElements.First().Position;
+
+            else if (point.Y >= lastRectangle.Bottom || point.X >= lastRectangle.Right)
+                return _lastOutputData.VisualElements.Last().Position;
+
+            // LINE BOUNDS
+            else
+            {
+                // Containing Text Element
+                var textElement = _lastOutputData.VisualElements.FirstOrDefault(x => x.Position.VisualBounds.Contains(point));
+
+                // None -> Take closest line of text
+                if (textElement == null)
+                {
+                    textElement = _lastOutputData.VisualElements.FirstOrDefault(x => x.Position.VisualBounds.Top <= point.Y &&
+                                                                                     x.Position.VisualBounds.Bottom >= point.Y);
+
+                    if (textElement == null)
+                        throw new Exception("SimpleTextEditorFormatter unable to locate text element for provided point!");
+
+                    else
+                        return new TextPosition(textElement.Position.SourceOffset + textElement.Length - 1,
+                                                textElement.Position.SourceLineNumber,
+                                                textElement.Position.VisualColumn,
+                                                textElement.Position.VisualLineNumber,
+                                                textElement.Position.ParagraphNumber);
+                }
+
+                // Search glyph run to see where point lies
+                var currentWidth = 0D;
+                var currentIndex = 0;
+
+                foreach (var glyphRun in textElement.Element.GetIndexedGlyphRuns())
+                {
+                    foreach (var advanceWidth in glyphRun.GlyphRun.AdvanceWidths)
+                    {
+                        if (textElement.Position.SourceOffset + currentIndex >= _textSource.GetLength())
+                            throw new Exception();
+
+                        // Found Text Position
+                        if (textElement.Position.VisualBounds.Left + currentWidth >= point.X)
+                            return new TextPosition(textElement.Position.SourceOffset + currentIndex,
+                                                    textElement.Position.SourceLineNumber,
+                                                    textElement.Position.VisualColumn,
+                                                    textElement.Position.VisualLineNumber,
+                                                    textElement.Position.ParagraphNumber);
+
+                        currentIndex++;
+                        currentWidth += advanceWidth;
+                    }
+                }
+
+                //throw new Exception("SimpleTextEditorFormatter unable to locate text element for provided point!");
+
+                return _lastOutputData.VisualElements.Last().Position;
+            }
+        }
+
+        /// <summary>
         /// Returns the top left point of the visual offset fromt he character offset. This top-left corner of the character's glyph, 
         /// or the top-left corner of the caret UI location. If getTrailingCaretPosition is set to true, then the point will return
         /// from the final glyph location's top-right corner, or a (0,0) point for an empty text source.
@@ -226,7 +301,7 @@ namespace SimpleTextEditor.Text
 
             // Verify Caret Position:  [0, Length], (not) [0, Length) (we only allow one character overflow)
             //
-            if (characterOffset > _lastOutputData.SourceLength)
+            if (characterOffset > _lastOutputData.SourceLength && getTrailingCaretPosition)
                 throw new ArgumentOutOfRangeException();
 
             foreach (var visualElement in _lastOutputData.VisualElements)

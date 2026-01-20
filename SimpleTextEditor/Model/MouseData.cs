@@ -5,12 +5,8 @@ namespace SimpleTextEditor.Model
 {
     public class MouseData
     {
-        public Rect SelectionBounds { get; set; }
+        public Point? MouseDownLocation { get; set; }
+        public Point MouseLocation { get; set; }
         public MouseButtonState LeftButton { get; set; }
-
-        public bool IsSet()
-        {
-            return this.SelectionBounds != Rect.Empty;
-        }
     }
 }

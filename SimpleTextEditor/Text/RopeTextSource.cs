@@ -55,12 +55,22 @@ namespace SimpleTextEditor.Text
             throw new NotImplementedException();
         }
 
+        public IndexRange GetNextPropertyRange(int offset, bool includeCurrentOffset)
+        {
+            throw new NotImplementedException();
+        }
+
         public ITextProperties GetProperties(int offset, out int length)
         {
             throw new NotImplementedException();
         }
 
         public void SetProperties(IndexRange range, ITextProperties properties)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ClearProperties()
         {
             throw new NotImplementedException();
         }
