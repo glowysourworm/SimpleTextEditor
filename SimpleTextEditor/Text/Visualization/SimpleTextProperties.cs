@@ -1,8 +1,8 @@
 ﻿using System.Windows.Media.TextFormatting;
 
-using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Visualization.Interface;
 
-namespace SimpleTextEditor.Text
+namespace SimpleTextEditor.Text.Visualization
 {
     public class SimpleTextProperties : ITextProperties
     {

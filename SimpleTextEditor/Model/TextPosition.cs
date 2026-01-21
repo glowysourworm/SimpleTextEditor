@@ -1,5 +1,7 @@
 ﻿using SimpleTextEditor.Model.Interface;
 
+using SimpleWpf.Extensions;
+
 namespace SimpleTextEditor.Model
 {
     /// <summary>
@@ -83,6 +85,11 @@ namespace SimpleTextEditor.Model
             }
 
             return 0;
+        }
+
+        public override string ToString()
+        {
+            return this.FormatToString();
         }
     }
 }

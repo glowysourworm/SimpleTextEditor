@@ -3,6 +3,8 @@ using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Source.Interface;
+using SimpleTextEditor.Text.Visualization.Interface;
 
 namespace SimpleTextEditor.Text
 {

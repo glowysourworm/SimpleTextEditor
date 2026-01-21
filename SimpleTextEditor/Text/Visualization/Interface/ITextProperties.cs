@@ -1,6 +1,6 @@
 ﻿using System.Windows.Media.TextFormatting;
 
-namespace SimpleTextEditor.Text.Interface
+namespace SimpleTextEditor.Text.Visualization.Interface
 {
     public interface ITextProperties
     {

@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 
-using SimpleTextEditor.Model;
+using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
 
 namespace SimpleTextEditor.Text.Interface
@@ -12,15 +12,20 @@ namespace SimpleTextEditor.Text.Interface
     /// </summary>
     public interface ITextVisualCore
     {
-        string GetTextCopy();
-        int GetTextLength();
-        int SearchText(char character, int startIndex);
+        bool IsInvalid { get; }
+        bool IsInitialized { get; }
+        int TextLength { get; }
 
         /// <summary>
         /// Initializes the core with the constraint (control) size. This must be called prior to loading,
         /// modifying text, or retrieveing formatted text output.
         /// </summary>
-        void Initialize(Size constraintSize);
+        void Initialize(SimpleTextEditorFormatter formatter, ITextSource textSource, VisualInputData inputData);
+
+        /// <summary>
+        /// Returns output from visual core, which is produced immediately after text or control size updates.
+        /// </summary>
+        VisualOutputData GetOutput();
 
         /// <summary>
         /// (Mutator) Appends text to the ITextSource, Invalidates cached GlyphRuns, Updates caret position Re-runs the
@@ -41,24 +46,23 @@ namespace SimpleTextEditor.Text.Interface
         void RemoveText(int offset, int count);
 
         /// <summary>
-        /// Returns the current caret render bounds - calculated by the visual core's formatter
+        /// (Mutator) Removes all text from the text source
         /// </summary>
-        Rect GetCaretBounds();
+        void ClearText();
 
         /// <summary>
-        /// Updates the constraint size for the text. This should be the entire size of the virtual document, or the
-        /// WPF control size. This will cause a re-run of the TextFormatter.
+        /// Updates constraint size for the visual core
         /// </summary>
         void UpdateSize(Size contorlSize);
 
         /// <summary>
-        /// Sets mouse information for text selection processing. Returns true if text was re-formatted.
+        /// Invalidates TextFormatter's TextRun cache
         /// </summary>
-        bool SetMouseInfo(MouseData mouseData);
+        void Invalidate();
 
         /// <summary>
-        /// Returns output from visual core, which is produced immediately after text or control size updates.
+        /// Invalidates TextFormatter's TextRun cache
         /// </summary>
-        SimpleTextVisualOutputData GetOutput();
+        void Invalidate(int startIndex, int additionLength, int removalLength);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace SimpleTextEditor.Text.Visualization
 {
-    public class SimpleTextVisualOutputData
+    public class VisualOutputData
     {
         // Visual lines for the visualization
         List<SimpleTextElement> _visualElements;
@@ -32,7 +32,7 @@ namespace SimpleTextEditor.Text.Visualization
         /// </summary>
         public IEnumerable<SimpleTextElement> VisualElements { get { return _visualElements; } }
 
-        public SimpleTextVisualOutputData(IEnumerable<SimpleTextElement> visualElements, Size constraint, Size desiredSize, int sourceLength)
+        public VisualOutputData(IEnumerable<SimpleTextElement> visualElements, Size constraint, Size desiredSize, int sourceLength)
         {
             this.ConstraintSize = constraint;
             this.DesiredSize = desiredSize;

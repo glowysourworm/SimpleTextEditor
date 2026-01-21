@@ -7,6 +7,7 @@ using System.Windows.Media.TextFormatting;
 using SimpleTextEditor.Component;
 using SimpleTextEditor.Component.Interface;
 using SimpleTextEditor.Model;
+using SimpleTextEditor.Text.Visualization;
 
 namespace SimpleTextEditor
 {
@@ -48,8 +49,6 @@ namespace SimpleTextEditor
         // Have to wait for control loading event to set the text properties
         IDocument? _document;
 
-        Point? _mouseDownPoint;
-
         public TextEditor()
         {
             this.Cursor = Cursors.IBeam;
@@ -61,15 +60,15 @@ namespace SimpleTextEditor
 
         private void TextEditor_Loaded(object sender, RoutedEventArgs e)
         {
-            _document = new Document(this.FontFamily,
-                                     this.FontSize,
-                                     Brushes.Black,
-                                     Brushes.Transparent,
-                                     Brushes.White,
-                                     Brushes.CadetBlue,
-                                     TextWrapping.NoWrap);
-
-            _document.Initialize(this.RenderSize);
+            _document = new Document();
+            _document.Initialize(new VisualInputData(this.RenderSize,
+                                                     this.FontFamily,
+                                                     this.FontSize,
+                                                     Brushes.Black,
+                                                     Brushes.Transparent,
+                                                     Brushes.White,
+                                                     Brushes.CadetBlue,
+                                                     TextWrapping.NoWrap));
 
             InvalidateVisual();
         }
@@ -137,31 +136,9 @@ namespace SimpleTextEditor
                 return;
             }
 
-            switch (controlInput)
-            {
-                case ControlInput.None:
-                    break;
-                case ControlInput.Backspace:
-                    _document.ProcessRemoveText(_document.TextLength - 1, 1);
-                    break;
-                case ControlInput.BeginningOfDocument:
-                case ControlInput.BeginningOfLine:
-                case ControlInput.CharacterLeft:
-                case ControlInput.CharacterRight:
-                case ControlInput.DeleteCurrentCharacter:
-                case ControlInput.EndOfDocument:
-                case ControlInput.EndOfLine:
-                case ControlInput.LineDown:
-                case ControlInput.LineUp:
-                case ControlInput.PageDown:
-                case ControlInput.PageUp:
-                case ControlInput.WordLeft:
-                case ControlInput.WordRight:
-                default:
-                    throw new Exception("Unhandled ControlInput");
-            }
+            var invalidate = _document.ProcessControlInput(controlInput);
 
-            if (controlInput != ControlInput.None)
+            if (controlInput != ControlInput.None || invalidate)
             {
                 e.Handled = true;
 
@@ -193,16 +170,7 @@ namespace SimpleTextEditor
         {
             base.OnMouseDown(e);
 
-            // Store Mouse Down Point
-            if (e.LeftButton == MouseButtonState.Pressed)
-                _mouseDownPoint = e.GetPosition(this);
-
-            var invalidate = !this.IsFocused || _document.ProcessMouseInput(new MouseData()
-            {
-                LeftButton = e.LeftButton,
-                MouseLocation = e.GetPosition(this),
-                MouseDownLocation = _mouseDownPoint
-            });
+            var invalidate = !this.IsFocused || _document.ProcessMouseButtonDown(e.GetPosition(this), e.LeftButton, e.RightButton);
 
             // Does not focus by default
             if (!this.IsFocused)
@@ -211,16 +179,11 @@ namespace SimpleTextEditor
             if (invalidate)
                 InvalidateVisual();
         }
-        protected override void OnMouseMove(MouseEventArgs e)
+        protected override void OnPreviewMouseMove(MouseEventArgs e)
         {
-            base.OnMouseMove(e);
+            base.OnPreviewMouseMove(e);
 
-            var invalidate = _document.ProcessMouseInput(new MouseData()
-            {
-                LeftButton = e.LeftButton,
-                MouseLocation = e.GetPosition(this),
-                MouseDownLocation = _mouseDownPoint
-            });
+            var invalidate = _document.ProcessMouseButtonDown(e.GetPosition(this), e.LeftButton, e.RightButton);
 
             if (invalidate)
                 InvalidateVisual();
@@ -229,8 +192,10 @@ namespace SimpleTextEditor
         {
             base.OnMouseUp(e);
 
-            if (e.LeftButton == MouseButtonState.Released)
-                _mouseDownPoint = null;
+            var invalidate = _document.ProcessMouseButtonDown(e.GetPosition(this), e.LeftButton, e.RightButton);
+
+            if (invalidate)
+                InvalidateVisual();
         }
 
         protected override void OnRender(DrawingContext drawingContext)

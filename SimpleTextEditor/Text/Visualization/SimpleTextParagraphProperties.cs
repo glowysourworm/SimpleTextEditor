@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Media.TextFormatting;
 
-namespace SimpleTextEditor.Text
+namespace SimpleTextEditor.Text.Visualization
 {
     /// <summary>
     /// Class to implement TextParagraphProperties, used by TextSource

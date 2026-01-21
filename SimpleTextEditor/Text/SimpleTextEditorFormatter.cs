@@ -3,11 +3,9 @@ using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model;
-using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
-
-using SimpleWpf.Extensions.Collection;
 
 namespace SimpleTextEditor.Text
 {
@@ -19,10 +17,10 @@ namespace SimpleTextEditor.Text
         // (see MSFT Advanced Text Formatting)
         TextFormatter _formatter;
 
-        SimpleTextVisualOutputData _lastOutputData;
+        VisualOutputData _lastOutputData;
 
         // Input data to the formatter
-        readonly SimpleTextVisualInputData _visualInputData;
+        readonly VisualInputData _visualInputData;
 
         // Primary text store
         readonly ITextSource _textSource;
@@ -33,13 +31,21 @@ namespace SimpleTextEditor.Text
         // Supposedly helps improve performance
         readonly TextRunCache _textRunCache;
 
-        public SimpleTextEditorFormatter(ITextRunProvider textRunProvider, ITextSource textSource, SimpleTextVisualInputData visualInputData)
+        public SimpleTextEditorFormatter(ITextRunProvider textRunProvider, ITextSource textSource, VisualInputData visualInputData)
         {
             _formatter = TextFormatter.Create(TextFormattingMode.Display);
             _visualInputData = visualInputData;
             _textSource = textSource;
             _textRunProvider = textRunProvider;
             _textRunCache = new TextRunCache();
+        }
+
+        /// <summary>
+        /// Returns last visual output. Must run MesaureText to produce visual output.
+        /// </summary>
+        public VisualOutputData GetLastOutput()
+        {
+            return _lastOutputData;
         }
 
         /// <summary>
@@ -170,201 +176,10 @@ namespace SimpleTextEditor.Text
             }
 
 
-            _lastOutputData = new SimpleTextVisualOutputData(textElements,
+            _lastOutputData = new VisualOutputData(textElements,
                                                               constraint,
                                                               new Size(desiredWidth, desiredHeight),
                                                               _textSource.GetLength());
-        }
-
-        public SimpleTextVisualOutputData GetLastOutput()
-        {
-            return _lastOutputData;
-        }
-
-        public ITextPosition CharacterOffsetToTextPosition(int characterOffset, AppendPosition appendPosition)
-        {
-            if (_lastOutputData == null)
-                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
-
-            if (characterOffset < 0 || (characterOffset > _lastOutputData.SourceLength))
-                throw new ArgumentOutOfRangeException("Please see AppendPosition documentation");
-
-            switch (appendPosition)
-            {
-                case AppendPosition.None:
-                case AppendPosition.EndOfLine:
-                {
-                    if (characterOffset < 0 || characterOffset >= _lastOutputData.SourceLength)
-                        throw new ArgumentOutOfRangeException();
-
-                    foreach (var visualElement in _lastOutputData.VisualElements)
-                    {
-                        if (visualElement.Contains(characterOffset))
-                        {
-                            // Return the offset for the requested character
-                            if (appendPosition == AppendPosition.EndOfLine)
-                                return visualElement.End.AsAppend(appendPosition, false);
-
-                            // AppendPosition.None
-                            else
-                                return TextPosition.FromLine(visualElement.End,
-                                                             characterOffset,
-                                                             visualElement.End.VisualColumnNumber);
-                        }
-                    }
-
-                    throw new Exception("Character offset not found!");
-                }
-                case AppendPosition.Append:
-                {
-                    if (characterOffset < 0 || characterOffset > _lastOutputData.SourceLength)
-                        throw new ArgumentOutOfRangeException();
-
-                    return _lastOutputData.VisualElements.Last().End.AsAppend(appendPosition, true);
-                }
-                default:
-                    throw new Exception("Unhandled AppendPosition");
-            }
-        }
-
-        /// <summary>
-        /// Returns the line height for a given visual line (this is MSFT's TextHeight, line height usually refers
-        /// to a multiplier to the text height, so it's usually set to 1.0D.
-        /// </summary>
-        public double GetVisualLineHeight(int visualLineNumber)
-        {
-            if (_lastOutputData == null)
-                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
-
-            var visualElement = _lastOutputData.VisualElements
-                                               .FirstOrDefault(x => x.Start.VisualLineNumber == visualLineNumber);
-
-            if (visualElement == null)
-                throw new Exception("Invalid visual line number");
-
-            return visualElement.Element.TextHeight;
-        }
-
-        /// <summary>
-        /// Returns the closest ITextPosition for the provided point:  1) Pre-cursor would be above the
-        /// text block, 2) Inside of the text block would return the closest glyph position, 3) After the
-        /// text block would return the last glyph's position.
-        /// </summary>
-        public ITextPosition VisualPointToTextPosition(Point point, out AppendPosition appendPosition)
-        {
-            if (_lastOutputData == null)
-                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
-
-            if (!_lastOutputData.VisualElements.Any())
-                throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
-
-            appendPosition = AppendPosition.None;
-
-            // ENTIRE TEXT BOUNDS
-            var lastRectangle = new Rect(_lastOutputData.ConstraintSize);
-
-            if (point.Y <= lastRectangle.Top || point.X <= lastRectangle.Left)
-                return _lastOutputData.VisualElements.First().Start;
-
-            else if (point.Y >= lastRectangle.Bottom || point.X >= lastRectangle.Right)
-            {
-                appendPosition = AppendPosition.Append;
-
-                return _lastOutputData.VisualElements.Last().End.AsAppend(AppendPosition.Append, true);
-            }
-
-
-            // LINE BOUNDS
-            else
-            {
-                // Containing Text Element
-                var textElement = _lastOutputData.VisualElements
-                                                 .FirstOrDefault(x => x.VisualBounds.Top <= point.Y && x.VisualBounds.Bottom >= point.Y);
-
-                // None -> Take closest line of text
-                if (textElement == null)
-                {
-                    appendPosition = AppendPosition.EndOfLine;
-
-                    return _lastOutputData.VisualElements.Last().End.AsAppend(appendPosition, true);
-                }
-
-                // Search glyph run to see where point lies
-                var currentWidth = 0D;
-                var currentIndex = 0;
-
-                foreach (var glyphRun in textElement.Element.GetIndexedGlyphRuns())
-                {
-                    foreach (var advanceWidth in glyphRun.GlyphRun.AdvanceWidths)
-                    {
-                        // Found Text Position
-                        if (textElement.VisualBounds.Left + currentWidth >= point.X)
-                        {
-                            appendPosition = (textElement.Start.Offset + currentIndex) == textElement.End.Offset ? AppendPosition.Append : AppendPosition.None;
-
-                            var result = TextPosition.FromLine(textElement.Start,
-                                                               textElement.Start.Offset + currentIndex,
-                                                               textElement.Start.VisualLineNumber);
-
-                            return result.AsAppend(appendPosition, true);
-                        }
-
-                        currentIndex++;
-                        currentWidth += advanceWidth;
-                    }
-                }
-
-                // Default:  Paragraph Append Position
-                appendPosition = AppendPosition.Append;
-
-                return textElement.End.AsAppend(appendPosition, true);
-            }
-        }
-
-        /// <summary>
-        /// Returns the top left point of the visual offset from the character offset. If append position is set, then
-        /// the EOL position is taken, which is calculated from the line's text element(s).
-        /// </summary>
-        public Point CharacterOffsetToVisualOffset(int characterOffset, AppendPosition appendPosition)
-        {
-            // Character -> ITextPosition
-            var position = CharacterOffsetToTextPosition(characterOffset, appendPosition);
-
-            // Get ITextElement from collection
-            var visualElement = _lastOutputData.GetElement(position.VisualElementIndex);
-            var positionX = 0D;
-
-            // Get glyph run(s) for this element (there is typically only one actual glyph run per line)
-            foreach (var glyphRun in visualElement.Element.GetIndexedGlyphRuns())
-            {
-                // Prepend
-                if (glyphRun.TextSourceCharacterIndex < characterOffset)
-                {
-                    // Reutrn the offset for the requested character
-                    for (int index = 0; index < glyphRun.GlyphRun.AdvanceWidths.Count &&
-                                        index + visualElement.Start.Offset < characterOffset; index++)
-                    {
-                        positionX += glyphRun.GlyphRun.AdvanceWidths[index];
-                    }
-                }
-            }
-
-            switch (appendPosition)
-            {
-                // Character Position (Insert)
-                case AppendPosition.None:
-                    return new Point(positionX, visualElement.VisualBounds.Top);
-
-                // Top-Right last character position
-                case AppendPosition.EndOfLine:
-                    return visualElement.VisualBounds.TopRight;
-
-                // Append:  Last visual character of paragraph, Top-Right
-                case AppendPosition.Append:
-                    return _lastOutputData.VisualElements.Last().VisualBounds.TopRight;
-                default:
-                    throw new Exception("Unhandled AppendPosition");
-            }
         }
     }
 }

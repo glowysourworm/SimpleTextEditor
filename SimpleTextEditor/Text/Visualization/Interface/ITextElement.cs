@@ -3,7 +3,7 @@ using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model.Interface;
 
-namespace SimpleTextEditor.Text.Interface
+namespace SimpleTextEditor.Text.Visualization.Interface
 {
     public interface ITextElement
     {

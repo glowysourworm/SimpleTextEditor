@@ -1,4 +1,5 @@
 ﻿using SimpleTextEditor.Model;
+using SimpleTextEditor.Text.Visualization.Interface;
 
 namespace SimpleTextEditor.Text.Interface
 {

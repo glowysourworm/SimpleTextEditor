@@ -2,7 +2,7 @@
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model.Interface;
-using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Visualization.Interface;
 
 namespace SimpleTextEditor.Text.Visualization
 {

@@ -1,6 +1,8 @@
 ﻿using SimpleTextEditor.Model;
+using SimpleTextEditor.Text.Visualization;
+using SimpleTextEditor.Text.Visualization.Interface;
 
-namespace SimpleTextEditor.Text.Interface
+namespace SimpleTextEditor.Text.Source.Interface
 {
     public interface ITextSource
     {
@@ -46,11 +48,16 @@ namespace SimpleTextEditor.Text.Interface
         /// <summary>
         /// Sets alternate text properties for a range of text
         /// </summary>
-        void SetProperties(IndexRange range, ITextProperties properties);
+        void SetProperties(IndexRange range, TextPropertySet propertySet);
 
         /// <summary>
         /// Clears alternate text properties for the entire text
         /// </summary>
         void ClearProperties();
+
+        /// <summary>
+        /// Clears all text from the text source
+        /// </summary>
+        void ClearText();
     }
 }

@@ -1,7 +1,9 @@
 ﻿using SimpleTextEditor.Model;
-using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Source.Interface;
+using SimpleTextEditor.Text.Visualization;
+using SimpleTextEditor.Text.Visualization.Interface;
 
-namespace SimpleTextEditor.Text
+namespace SimpleTextEditor.Text.Source
 {
     public class RopeTextSource : ITextSource
     {
@@ -48,11 +50,6 @@ namespace SimpleTextEditor.Text
             throw new NotImplementedException();
         }
 
-        public void SetMouseInfo(MouseData mouseData)
-        {
-            throw new NotImplementedException();
-        }
-
         public IndexRange[] GetPropertySlices()
         {
             throw new NotImplementedException();
@@ -79,6 +76,16 @@ namespace SimpleTextEditor.Text
         }
 
         public IDictionary<IndexRange, ITextProperties> GetTextLineProperties(char[] textLine, int textLineOffset, int textLineCharacterOffset)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void SetProperties(IndexRange range, TextPropertySet propertySet)
+        {
+            throw new NotImplementedException();
+        }
+
+        public void ClearText()
         {
             throw new NotImplementedException();
         }

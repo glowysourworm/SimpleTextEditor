@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Input;
 
 using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Visualization;
@@ -13,15 +14,17 @@ namespace SimpleTextEditor.Component.Interface
         int TextLength { get; }
 
         /// <summary>
-        /// Returns the text offset (for the ITextSource) from the UI point provided. This
-        /// is calculated by the cache of UI TextRun elements in the core.
-        /// </summary>
-        void ProcessUILeftClick(Point pointUI);
-        void ProcessControlInput(ControlInput input);
-        bool ProcessMouseInput(MouseData mouseData);
+        /// Processes requested control input: Move caret, Select text, Remove selected text, etc...
+        /// </summary>        
+        bool ProcessControlInput(ControlInput input);
+        bool ProcessPreviewMouseMove(Point pointUI, MouseButtonState leftButtonState, MouseButtonState rightButtonState);
+        bool ProcessMouseButtonDown(Point pointUI, MouseButtonState leftButtonState, MouseButtonState rightButtonState);
+        bool ProcessMouseButtonUp(Point pointUI, MouseButtonState leftButtonState, MouseButtonState rightButtonState);
 
+        /// <summary>
+        /// Processes input text using the current cursor position
+        /// </summary>
         void ProcessInputText(string inputText);
-        void ProcessRemoveText(int offset, int count);
 
         /// <summary>
         /// Returns visible list of visual elements that may be rendered
@@ -30,7 +33,7 @@ namespace SimpleTextEditor.Component.Interface
         Size Measure(Size availableSize);
         Rect GetCaretBounds();
 
-        void Initialize(Size constraintSize);
+        void Initialize(VisualInputData inputData);
         void Load(string text);
         void Clear();
     }

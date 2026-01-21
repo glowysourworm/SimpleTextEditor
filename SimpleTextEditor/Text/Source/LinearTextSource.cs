@@ -1,12 +1,14 @@
 ﻿using System.Data;
 
 using SimpleTextEditor.Model;
-using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Source.Interface;
+using SimpleTextEditor.Text.Visualization;
+using SimpleTextEditor.Text.Visualization.Interface;
 
 using SimpleWpf.SimpleCollections.Collection;
 using SimpleWpf.SimpleCollections.Extension;
 
-namespace SimpleTextEditor.Text
+namespace SimpleTextEditor.Text.Source
 {
     public class LinearTextSource : ITextSource
     {
@@ -17,13 +19,15 @@ namespace SimpleTextEditor.Text
         private SimpleDictionary<IndexRange, ITextProperties> _propertyDict;
 
         // Defaults set by the control
+        private readonly VisualInputData _visualInputData;
         private readonly ITextProperties _defaultProperties;
 
-        public LinearTextSource(ITextProperties defaultProperties)
+        public LinearTextSource(VisualInputData visualInputData)
         {
             _source = new TextEditorString();
             _propertyDict = new SimpleDictionary<IndexRange, ITextProperties>();
-            _defaultProperties = defaultProperties;
+            _visualInputData = visualInputData;
+            _defaultProperties = visualInputData.GetProperties(TextPropertySet.Normal);
         }
 
         public void AppendText(string text)
@@ -130,7 +134,7 @@ namespace SimpleTextEditor.Text
             return _defaultProperties;
         }
 
-        public void SetProperties(IndexRange range, ITextProperties properties)
+        public void SetProperties(IndexRange range, TextPropertySet propertySet)
         {
             // Validate
             if (!IndexRange.FromStartCount(0, _source.Length).Contains(range))
@@ -159,7 +163,7 @@ namespace SimpleTextEditor.Text
             }
 
             // New Properties
-            _propertyDict.Add(range, properties);
+            _propertyDict.Add(range, _visualInputData.GetProperties(propertySet));
         }
 
         public void ClearProperties()
@@ -191,6 +195,12 @@ namespace SimpleTextEditor.Text
             }
 
             return -1;
+        }
+
+        public void ClearText()
+        {
+            _source = new TextEditorString();
+            _propertyDict.Clear();
         }
 
         public override string ToString()

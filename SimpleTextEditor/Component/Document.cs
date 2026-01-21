@@ -1,5 +1,5 @@
 ﻿using System.Windows;
-using System.Windows.Media;
+using System.Windows.Input;
 
 using SimpleTextEditor.Component.Interface;
 using SimpleTextEditor.Model;
@@ -12,119 +12,68 @@ namespace SimpleTextEditor.Component
     public class Document : IDocument
     {
         // Carries the primary text source
-        readonly ITextVisualCore _visualCore;
+        readonly ITextInputCore _core;
 
-        public int TextLength { get { return _visualCore.GetTextLength(); } }
+        public int TextLength { get; }
 
-        public Document(FontFamily fontFamily,
-                        double fontSize,
-                        Brush foreground,
-                        Brush background,
-                        Brush highlightForeground,
-                        Brush highlightBackground,
-                        TextWrapping textWrapping)
+        public Document()
         {
-            _visualCore = new SimpleTextVisualCore(fontFamily, fontSize, foreground, background, highlightForeground, highlightBackground, textWrapping);
+            _core = new SimpleTextInputCore();
         }
 
         #region (public) IDocument Methods
-        public void Initialize(Size constraintSize)
+        public void Initialize(VisualInputData visualInputData)
         {
-            _visualCore.Initialize(constraintSize);
+            _core.Initialize(visualInputData);
         }
         public void Load(string text)
         {
-            _visualCore.AppendText(text);
+            _core.Load(text);
         }
         public Size Measure(Size constraint)
         {
             // Update size on the backend
-            _visualCore.UpdateSize(constraint);
+            _core.UpdateSize(constraint);
 
             // This will force a measure pass if it hasn't run already
-            return _visualCore.GetOutput().DesiredSize;
+            return _core.GetOutput().DesiredSize;
         }
         public Rect GetCaretBounds()
         {
-            return _visualCore.GetCaretBounds();
+            return _core.GetCaretBounds();
         }
-        public void ProcessUILeftClick(Point pointUI)
+        public bool ProcessControlInput(ControlInput input)
         {
-            throw new NotImplementedException();
-        }
-        public void ProcessControlInput(ControlInput input)
-        {
-            switch (input)
-            {
-                case ControlInput.LineUp:
-                    break;
-                case ControlInput.LineDown:
-                    break;
-                case ControlInput.CharacterLeft:
-                    break;
-                case ControlInput.CharacterRight:
-                    break;
-                case ControlInput.WordLeft:
-                    break;
-                case ControlInput.WordRight:
-                    break;
-                case ControlInput.EndOfLine:
-                    break;
-                case ControlInput.BeginningOfLine:
-                    break;
-                case ControlInput.PageUp:
-                    break;
-                case ControlInput.PageDown:
-                    break;
-                default:
-                    throw new Exception("Unhandled ControlInput Type");
-            }
-        }
-        public bool ProcessMouseInput(MouseData mouseData)
-        {
-            return _visualCore.SetMouseInfo(mouseData);
-        }
-        public void ProcessInputText(string inputText)
-        {
-            _visualCore.AppendText(inputText);
-        }
-        public void ProcessRemoveText(int offset, int count)
-        {
-            _visualCore.RemoveText(offset, count);
-        }
-        public IEnumerable<SimpleTextElement> GetVisualElements()
-        {
-            // Will force a measurement pass if it hasn't run already.
-            return _visualCore.GetOutput().VisualElements;
+            return _core.ProcessControlInput(input);
         }
         public void Clear()
         {
-            throw new NotImplementedException();
+            _core.Load(string.Empty);
         }
-        #endregion
 
-        #region (private) UI <--> ITextVisualCore Methods
-        private int GetTextOffsetFromUI(Point pointUI)
+        public bool ProcessPreviewMouseMove(Point pointUI, MouseButtonState leftButtonState, MouseButtonState rightButtonState)
         {
-            //if (_visualOutputData != null)
-            //{
-            //    foreach (var element in _visualOutputData.VisualElements)
-            //    {
-            //        // Get Text Bounds: For this element (NOT SURE ABOUT POSITION!)
-            //        //var textBounds = element.Element.GetTextBounds(element.Position.SourceOffset, element.Length);
+            return _core.ProcessPreviewMouseMove(pointUI, leftButtonState, rightButtonState);
+        }
 
-            //        var textBounds = element.Position.VisualBounds;
+        public bool ProcessMouseButtonDown(Point pointUI, MouseButtonState leftButtonState, MouseButtonState rightButtonState)
+        {
+            return _core.ProcessMouseDown(pointUI, leftButtonState, rightButtonState);
+        }
 
-            //        //var index = textBounds.SelectMany(x => x.TextRunBounds)
-            //        //                      .FirstOrDefault(x => x.Rectangle.Contains(pointUI))
-            //        //                      ?.TextSourceCharacterIndex ?? -1;
+        public bool ProcessMouseButtonUp(Point pointUI, MouseButtonState leftButtonState, MouseButtonState rightButtonState)
+        {
+            return _core.ProcessMouseUp(pointUI, leftButtonState, rightButtonState);
+        }
 
-            //        if (textBounds.Contains(pointUI))
-            //            return element.Position.SourceOffset;
-            //    }
-            //}
+        public void ProcessInputText(string inputText)
+        {
+            _core.ProcessTextInputAtCaret(inputText);
+        }
 
-            return -1;
+        public IEnumerable<SimpleTextElement> GetVisualElements()
+        {
+            return _core.GetOutput().VisualElements;
         }
         #endregion
     }

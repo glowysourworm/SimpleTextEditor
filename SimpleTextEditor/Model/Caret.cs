@@ -5,7 +5,7 @@ namespace SimpleTextEditor.Model
     public class Caret
     {
         public Rect VisualBounds { get; private set; }
-        public int SourceOffset { get; private set; }
+        public int Offset { get; private set; }
         public AppendPosition AppendPosition { get; private set; }
 
         public Caret(int sourceOffset, Rect visualBounds, AppendPosition appendPosition)
@@ -16,8 +16,25 @@ namespace SimpleTextEditor.Model
         public void Update(int sourceOffset, Rect visualBounds, AppendPosition appendPosition)
         {
             this.VisualBounds = visualBounds;
-            this.SourceOffset = sourceOffset;
+            this.Offset = sourceOffset;
             this.AppendPosition = appendPosition;
+        }
+
+        /// <summary>
+        /// Gets offset adjusted to the character in question (AppendPosition)
+        /// </summary>
+        public int GetAdjustedOffset()
+        {
+            switch (this.AppendPosition)
+            {
+                case AppendPosition.None:
+                case AppendPosition.EndOfLine:
+                    return this.Offset;
+                case AppendPosition.Append:
+                    return this.Offset - 1;
+                default:
+                    throw new Exception("Unhandled AppendPosition:  Caret.cs");
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-using SimpleTextEditor.Text.Interface;
+using SimpleTextEditor.Text.Visualization.Interface;
 
 using SimpleWpf.SimpleCollections.Collection;
 
@@ -22,17 +22,19 @@ namespace SimpleTextEditor.Text.Visualization
     /// Visual input data - which may link directly to source indices. For now, this is just the
     /// MSFT input classes for the TextFormatter, and a few extra things for our renderer.
     /// </summary>
-    public class SimpleTextVisualInputData
+    public class VisualInputData
     {
         // Recommended setting for pixelsPerDip
         public const double PixelsPerDip = 1.25D;
 
+        public Size ConstraintSize { get; }
         public double LineHeight { get; }
         public double Indent { get; }
 
         SimpleDictionary<TextPropertySet, ITextProperties> _propertyDict;
 
-        public SimpleTextVisualInputData(FontFamily fontFamily,
+        public VisualInputData(Size constraintSize,
+                                         FontFamily fontFamily,
                                          double fontSize,
                                          Brush foreground,
                                          Brush background,
@@ -40,6 +42,7 @@ namespace SimpleTextEditor.Text.Visualization
                                          Brush highlightBackground,
                                          TextWrapping textWrapping)
         {
+            this.ConstraintSize = constraintSize;
             this.LineHeight = 1.0D;
             this.Indent = 0.0D;
 
