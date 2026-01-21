@@ -48,7 +48,7 @@ namespace SimpleTextEditor.Text
 
             // Initialize Components
             formatter.Initialize(textRunProvider, textSource, inputData);
-            _visualCore.Initialize(formatter, textSource, inputData);
+            _visualCore.Initialize(formatter, textPropertiesSource, textSource, inputData);
 
             _initialized = true;
         }

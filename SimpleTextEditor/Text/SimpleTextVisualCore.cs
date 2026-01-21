@@ -34,14 +34,12 @@ namespace SimpleTextEditor.Text
         {
         }
 
-        public void Initialize(ITextFormatter formatter, ITextSource textSource, VisualInputData inputData)
+        public void Initialize(ITextFormatter formatter, ITextPropertiesSource propertiesSource, ITextSource textSource, VisualInputData inputData)
         {
             _textSource = textSource;
             _formatter = formatter;
             _visualInputData = inputData;
-            _propertiesSource = new TextPropertiesSource(textSource,
-                                                         inputData.DefaultProperties,
-                                                         inputData.DefaultParagraphProperties);
+            _propertiesSource = propertiesSource;
         }
         public void UpdateSize(Size contorlSize)
         {

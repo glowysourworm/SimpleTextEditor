@@ -2,6 +2,7 @@
 using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
+using SimpleTextEditor.Text.Visualization.Interface;
 using SimpleTextEditor.Text.Visualization.Properties;
 
 namespace SimpleTextEditor.Text.Interface
@@ -22,7 +23,7 @@ namespace SimpleTextEditor.Text.Interface
         /// Initializes the core with the constraint (control) size. This must be called prior to loading,
         /// modifying text, or retrieveing formatted text output.
         /// </summary>
-        void Initialize(ITextFormatter formatter, ITextSource textSource, VisualInputData inputData);
+        void Initialize(ITextFormatter formatter, ITextPropertiesSource propertiesSource, ITextSource textSource, VisualInputData inputData);
 
         /// <summary>
         /// (Mutator) Appends text to the ITextSource, Invalidates cached GlyphRuns, Updates caret position Re-runs the
