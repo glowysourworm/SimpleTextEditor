@@ -1,5 +1,7 @@
 ﻿using System.Windows;
 
+using SimpleTextEditor.Model;
+using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
@@ -8,10 +10,8 @@ namespace SimpleTextEditor.Text
 {
     public class SimpleTextVisualCore : ITextVisualCore
     {
-        public bool IsInvalid { get { return _invalid; } }
-        public bool IsInitialized { get { return _initialized; } }
-
-        public int TextLength { get; }
+        public bool IsInvalid { get { return _formatter.IsInvalid; } }
+        public bool IsInitialized { get { return _formatter.IsInitialized; } }
 
         // Recommended setting for pixelsPerDip
         protected const double PixelsPerDip = 1.25D;
@@ -20,49 +20,24 @@ namespace SimpleTextEditor.Text
         ITextSource _textSource;
 
         // MSFT Advanced text formatting
-        SimpleTextEditorFormatter _formatter;
-
-        // Keep track of control size. If it doesen't change, we don't need to re-call the formatter's measure method.
-        Size _constraintSize;
-        bool _initialized;
-        bool _invalid;
+        ITextFormatter _formatter;
 
         public SimpleTextVisualCore()
         {
-            _initialized = false;
-            _invalid = true;
         }
 
-        public void Initialize(SimpleTextEditorFormatter formatter, ITextSource textSource, VisualInputData inputData)
+        public void Initialize(ITextFormatter formatter, ITextSource textSource, VisualInputData inputData)
         {
-            if (_initialized)
-                throw new Exception("SimpleTextVisualCore already initialized");
-
             _textSource = textSource;
             _formatter = formatter;
-
-            _constraintSize = inputData.ConstraintSize;
-            _formatter.MeasureText(inputData.ConstraintSize);
-            _initialized = true;
-            _invalid = false;
         }
         public void UpdateSize(Size contorlSize)
         {
-            if (!_initialized)
-                throw new Exception("SimpleTextVisualCore not yet initialized");
-
-            var invalidate = !contorlSize.Equals(_constraintSize) || _invalid;
-
-            _constraintSize = contorlSize;
-
-            if (invalidate)
-                _formatter.MeasureText(_constraintSize);
-
-            _invalid = false;
+            _formatter.UpdateSize(contorlSize);
         }
-        public void AppendText(string text)
+        public ITextPosition AppendText(string text)
         {
-            if (!_initialized)
+            if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
             // Insert
@@ -73,10 +48,13 @@ namespace SimpleTextEditor.Text
 
             // Invalidate Cache -> Invalid
             Invalidate(insertIndex, text.Length, -1);
+
+            return _formatter.GetOutput()
+                             .CharacterOffsetToTextPosition(_textSource.GetLength(), AppendPosition.Append);
         }
-        public void InsertText(int offset, string text)
+        public ITextPosition InsertText(int offset, string text)
         {
-            if (!_initialized)
+            if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
             // Insert
@@ -84,10 +62,13 @@ namespace SimpleTextEditor.Text
 
             // Invalidate Cache -> Invalid
             Invalidate(offset, text.Length, -1);
+
+            return _formatter.GetOutput()
+                             .CharacterOffsetToTextPosition(offset + text.Length, AppendPosition.None);
         }
-        public void RemoveText(int offset, int count)
+        public ITextPosition RemoveText(int offset, int count)
         {
-            if (!_initialized)
+            if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
             // Remove
@@ -95,43 +76,42 @@ namespace SimpleTextEditor.Text
 
             // Update TextRun Cache
             Invalidate(offset, -1, offset);
+
+            return _formatter.GetOutput()
+                             .CharacterOffsetToTextPosition(offset, AppendPosition.None);
         }
-        public void ClearText()
+        public ITextPosition ClearText()
         {
-            if (!_initialized)
+            if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
             _textSource.ClearText();
+
+            return _formatter.GetOutput()
+                             .CharacterOffsetToTextPosition(0, AppendPosition.Append);
         }
         public VisualOutputData GetOutput()
         {
-            if (!_initialized)
+            if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            if (_invalid)
-                _formatter.MeasureText(_constraintSize);
-
-            _invalid = false;
-
-            return _formatter.GetLastOutput();
+            return _formatter.GetOutput();
         }
 
         public void Invalidate()
         {
-            if (!_initialized)
+            if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            _formatter.InvalidateCache();
-            _invalid = true;
+            _formatter.Invalidate();
         }
 
         public void Invalidate(int startIndex, int additionLength, int removalLength)
         {
-            if (!_initialized)
+            if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            _formatter.UpdateCache(startIndex, additionLength, removalLength);
-            _invalid = true;
+            _formatter.Invalidate(startIndex, additionLength, removalLength);
         }
     }
 }

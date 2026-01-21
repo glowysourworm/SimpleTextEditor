@@ -8,7 +8,7 @@ namespace SimpleTextEditor.Text.Interface
     /// Component that acts as a front-end to the visual core. All UI calls should be routed through here to
     /// handle inputs, and caret indexing, which can be an extra complication to the text processing.
     /// </summary>
-    public interface ITextInputCore : ITextVisualComponent
+    public interface ITextInputCore : ITextInputComponent
     {
         /// <summary>
         /// Initializes the core with the constraint (control) size. This must be called prior to loading,

@@ -39,9 +39,10 @@ namespace SimpleTextEditor.Text
 
             // MSFT TextFormatter 
             var textRunProvider = new SimpleTextRunProvider(_textSource);
-            var formatter = new SimpleTextEditorFormatter(textRunProvider, _textSource, inputData);
+            var formatter = new SimpleTextFormatter();
 
             // Initialize Components
+            formatter.Initialize(textRunProvider, _textSource, inputData);
             _visualCore.Initialize(formatter, _textSource, inputData);
 
             _initialized = true;
@@ -131,7 +132,16 @@ namespace SimpleTextEditor.Text
 
         public bool ProcessTextInputAtCaret(string text)
         {
-            throw new NotImplementedException();
+            ITextPosition caretPosition = null;
+
+            if (_caret.AppendPosition == AppendPosition.Append)
+                caretPosition = _visualCore.AppendText(text);
+            else
+                caretPosition = _visualCore.InsertText(_caret.GetAdjustedOffset(), text);
+
+            UpdateCaret(caretPosition);
+
+            return _visualCore.IsInvalid;
         }
 
         public bool ProcessRemoveSelectedText()
@@ -172,9 +182,10 @@ namespace SimpleTextEditor.Text
         #region (private) Update Methods
         private void UpdateMouseData(Point location, MouseButtonState leftButtonState, MouseButtonState rightButtonState)
         {
-            if (leftButtonState == MouseButtonState.Pressed)
+            if (leftButtonState == MouseButtonState.Pressed && _mouseDownPoint == null)
                 _mouseDownPoint = location;
-            else
+
+            else if (leftButtonState == MouseButtonState.Released)
                 _mouseDownPoint = null;
         }
         private bool ProcessMouse(Point currentLocation)

@@ -1,5 +1,4 @@
-﻿using System.Windows;
-
+﻿using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
 
@@ -10,59 +9,35 @@ namespace SimpleTextEditor.Text.Interface
     /// a reference to this primary text store. Produces visual lines, paragraphs, spans, and anything else visually required
     /// for a WPF rendering of the text.
     /// </summary>
-    public interface ITextVisualCore
+    public interface ITextVisualCore : ITextVisualComponent
     {
-        bool IsInvalid { get; }
-        bool IsInitialized { get; }
-        int TextLength { get; }
-
         /// <summary>
         /// Initializes the core with the constraint (control) size. This must be called prior to loading,
         /// modifying text, or retrieveing formatted text output.
         /// </summary>
-        void Initialize(SimpleTextEditorFormatter formatter, ITextSource textSource, VisualInputData inputData);
-
-        /// <summary>
-        /// Returns output from visual core, which is produced immediately after text or control size updates.
-        /// </summary>
-        VisualOutputData GetOutput();
+        void Initialize(ITextFormatter formatter, ITextSource textSource, VisualInputData inputData);
 
         /// <summary>
         /// (Mutator) Appends text to the ITextSource, Invalidates cached GlyphRuns, Updates caret position Re-runs the
-        /// TextFormatter to produce new visual text elements, updates Caret special "glyph".
+        /// TextFormatter to produce new visual text elements, updates Caret special "glyph". Returns the new caret position.
         /// </summary>
-        void AppendText(string text);
+        ITextPosition AppendText(string text);
 
         /// <summary>
         /// (Mutator) Inserts text to the ITextSource, Invalidates cached GlyphRuns, Updates caret position Re-runs the
-        /// TextFormatter to produce new visual text elements, updates Caret special "glyph".
+        /// TextFormatter to produce new visual text elements, updates Caret special "glyph". Returns the new caret position.
         /// </summary>
-        void InsertText(int offset, string text);
+        ITextPosition InsertText(int offset, string text);
 
         /// <summary>
         /// (Mutator) Appends text from the ITextSource, Invalidates cached GlyphRuns, Updates caret position Re-runs the
-        /// TextFormatter to produce new visual text elements, updates Caret special "glyph".
+        /// TextFormatter to produce new visual text elements, updates Caret special "glyph". Returns the new caret position.
         /// </summary>
-        void RemoveText(int offset, int count);
+        ITextPosition RemoveText(int offset, int count);
 
         /// <summary>
-        /// (Mutator) Removes all text from the text source
+        /// (Mutator) Removes all text from the text source. Returns the new caret position.
         /// </summary>
-        void ClearText();
-
-        /// <summary>
-        /// Updates constraint size for the visual core
-        /// </summary>
-        void UpdateSize(Size contorlSize);
-
-        /// <summary>
-        /// Invalidates TextFormatter's TextRun cache
-        /// </summary>
-        void Invalidate();
-
-        /// <summary>
-        /// Invalidates TextFormatter's TextRun cache
-        /// </summary>
-        void Invalidate(int startIndex, int additionLength, int removalLength);
+        ITextPosition ClearText();
     }
 }

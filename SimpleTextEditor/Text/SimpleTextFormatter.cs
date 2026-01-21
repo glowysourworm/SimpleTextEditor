@@ -12,64 +12,90 @@ namespace SimpleTextEditor.Text
     /// <summary>
     /// Formats lines of text from the text source, and prepares rendered TextLine objects for the IDocument
     /// </summary>
-    public class SimpleTextEditorFormatter
+    public class SimpleTextFormatter : ITextFormatter
     {
+        public bool IsInvalid { get { return _invalid; } }
+        public bool IsInitialized { get { return _initialized; } }
+
         // (see MSFT Advanced Text Formatting)
         TextFormatter _formatter;
 
         VisualOutputData _lastOutputData;
 
         // Input data to the formatter
-        readonly VisualInputData _visualInputData;
+        VisualInputData _visualInputData;
 
         // Primary text store
-        readonly ITextSource _textSource;
+        ITextSource _textSource;
 
         // Primary TextRun source
-        readonly ITextRunProvider _textRunProvider;
+        ITextRunProvider _textRunProvider;
 
         // Supposedly helps improve performance
-        readonly TextRunCache _textRunCache;
+        TextRunCache _textRunCache;
 
-        public SimpleTextEditorFormatter(ITextRunProvider textRunProvider, ITextSource textSource, VisualInputData visualInputData)
+        // Keep track of control size. If it doesen't change, we don't need to re-call the formatter's measure method.
+        Size _constraintSize;
+        bool _initialized;
+        bool _invalid;
+
+        public SimpleTextFormatter()
         {
+            _initialized = false;
+            _invalid = true;
+        }
+        public void Initialize(ITextRunProvider textRunProvider, ITextSource textSource, VisualInputData visualInputData)
+        {
+            if (_initialized)
+                throw new Exception("SimpleTextEditorFormatter already initialized.");
+
             _formatter = TextFormatter.Create(TextFormattingMode.Display);
             _visualInputData = visualInputData;
             _textSource = textSource;
             _textRunProvider = textRunProvider;
             _textRunCache = new TextRunCache();
-        }
 
-        /// <summary>
-        /// Returns last visual output. Must run MesaureText to produce visual output.
-        /// </summary>
-        public VisualOutputData GetLastOutput()
+            _initialized = true;
+        }
+        public VisualOutputData GetOutput()
         {
+            if (!_initialized)
+                throw new Exception("SimpleTextEditorFormatter must be initialized prior to calling other methods.");
+
+            if (_lastOutputData == null)
+                Run();
+
+            if (_invalid)
+                Run();
+
             return _lastOutputData;
         }
-
-        /// <summary>
-        /// MSFT TextFormatter TextRunCache API for updating the text run cache. Use as offset / addition (or)
-        /// offset / removal. Set the other to -1.
-        /// </summary>
-        /// <param name="offset">Offset index in the text source for the addition / removal</param>
-        /// <param name="additionLength">addition length</param>
-        /// <param name="removalLength">removal length</param>
-        public void UpdateCache(int offset, int additionLength, int removalLength)
+        public void UpdateSize(Size contorlSize)
         {
-            //_textRunCache.Invalidate();
-            _textRunCache.Change(offset, additionLength, removalLength);
+            if (!_initialized)
+                throw new Exception("SimpleTextEditorFormatter must be initialized prior to calling other methods.");
+
+            _constraintSize = contorlSize;
+            _invalid = true;
         }
-
-        /// <summary>
-        /// Invalidates entire contents of cache, which will "re-draw" the formatted text.
-        /// </summary>
-        public void InvalidateCache()
+        public void Invalidate()
         {
+            if (!_initialized)
+                throw new Exception("SimpleTextEditorFormatter must be initialized prior to calling other methods.");
+
             _textRunCache.Invalidate();
+            _invalid = true;
+        }
+        public void Invalidate(int startIndex, int additionLength, int removalLength)
+        {
+            if (!_initialized)
+                throw new Exception("SimpleTextEditorFormatter must be initialized prior to calling other methods.");
+
+            _textRunCache.Invalidate();
+            _invalid = true;
         }
 
-        public void MeasureText(Size constraint)
+        private void Run()
         {
             // Procedure: This must take into account several pre-conditions. The use of the text
             //            formatter depends on what's going on on the UI, so there are UI properties
@@ -118,23 +144,16 @@ namespace SimpleTextEditor.Text
                 TextLineBreak? lastLineBreak = null;
                 TextLine textElement = null;
 
-                try
-                {
-                    // First Pass Measurement (MAKES MULTIPLE CALLS TO TextSource!!!)
-                    //
-                    textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
-                                                        characterOffset,                              // Character offset to ITextSource
-                                                        constraint.Width,                             // UI Width
-                                                        _visualInputData
-                                                            .GetProperties(TextPropertySet.Normal)
-                                                            .ParagraphProperties,                     // Visual Properties (Default Properties)
-                                                        lastLineBreak/*,                              // Last Line Break
-                                                        _textRunCache*/);                         // TextRunCache (MSFT) stores output of formatter
-                }
-                catch (ArgumentOutOfRangeException ex)
-                {
-                    throw new Exception("Error formatting text", ex);
-                }
+                // First Pass Measurement (MAKES MULTIPLE CALLS TO TextSource!!!)
+                //
+                textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
+                                                    characterOffset,                              // Character offset to ITextSource
+                                                    _visualInputData.ConstraintSize.Width,        // UI Width
+                                                    _visualInputData
+                                                        .GetProperties(TextPropertySet.Normal)
+                                                        .ParagraphProperties,                     // Visual Properties (Default Properties)
+                                                    lastLineBreak/*,                              // Last Line Break
+                                                    _textRunCache*/);                             // TextRunCache (MSFT) stores output of formatter
 
                 // Get the number of line breaks
                 var textEOL = textElement.GetTextRunSpans().Count(x => x.Value is TextEndOfLine);
@@ -177,9 +196,11 @@ namespace SimpleTextEditor.Text
 
 
             _lastOutputData = new VisualOutputData(textElements,
-                                                              constraint,
-                                                              new Size(desiredWidth, desiredHeight),
-                                                              _textSource.GetLength());
+                                                   _visualInputData.ConstraintSize,
+                                                   new Size(desiredWidth, desiredHeight),
+                                                   _textSource.GetLength());
+
+            _invalid = false;
         }
     }
 }

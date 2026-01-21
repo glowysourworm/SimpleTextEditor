@@ -48,7 +48,8 @@ namespace SimpleTextEditor.Text.Visualization
                             else
                                 return TextPosition.FromLine(visualElement.End,
                                                              characterOffset,
-                                                             visualElement.End.VisualColumnNumber);
+                                                             visualElement.End.VisualColumnNumber)
+                                                   .AsAppend(appendPosition, false);
                         }
                     }
 
