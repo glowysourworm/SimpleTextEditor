@@ -1,6 +1,5 @@
 ﻿using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media;
 
 using SimpleTextEditor.Model;
 using SimpleTextEditor.Model.Interface;
@@ -15,6 +14,7 @@ namespace SimpleTextEditor.Text
     {
         // Primary Components
         ITextVisualCore _visualCore;
+        VisualInputData _visualInputData;
 
         // Primary caret source
         Caret _caret;
@@ -40,6 +40,7 @@ namespace SimpleTextEditor.Text
         {
             var textSource = new LinearTextSource(inputData);
             _visualCore = new SimpleTextVisualCore();
+            _visualInputData = inputData;
 
             // MSFT TextFormatter 
             var textPropertiesSource = new TextPropertiesSource(textSource, inputData.DefaultProperties, inputData.DefaultParagraphProperties);
@@ -179,7 +180,20 @@ namespace SimpleTextEditor.Text
             if (_selectedRange == null)
                 return false;
 
+            // De-Select Text (other properties should be left as they were)
+            _visualCore.ModifyTextRange(_selectedRange, x =>
+            {
+                x.Modify(x.Typeface,
+                         x.FontRenderingEmSize,
+                         _visualInputData.DefaultProperties.ForegroundBrush,
+                         _visualInputData.DefaultProperties.BackgroundBrush);
+            });
+
+            // Remove Text
             var caretPosition = _visualCore.RemoveText(_selectedRange.StartIndex, _selectedRange.Length);
+
+            // Reset Selection Range
+            _selectedRange = null;
 
             UpdateCaret(caretPosition);
 
@@ -272,7 +286,10 @@ namespace SimpleTextEditor.Text
                 _visualCore.ClearTextProperties();
                 _visualCore.ModifyTextRange(_selectedRange, x =>
                 {
-                    x.Modify(x.Typeface, x.FontRenderingEmSize, Brushes.White, Brushes.Blue);
+                    x.Modify(x.Typeface,
+                             x.FontRenderingEmSize,
+                             _visualInputData.DefaultHighlightProperties.ForegroundBrush,
+                             _visualInputData.DefaultHighlightProperties.BackgroundBrush);
                 });
 
                 // TODO: Performance Optimization

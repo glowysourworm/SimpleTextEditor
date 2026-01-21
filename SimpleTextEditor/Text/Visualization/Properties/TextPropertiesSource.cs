@@ -54,7 +54,7 @@ namespace SimpleTextEditor.Text.Visualization.Properties
 
             if (range != null && range.Contains(offset))
             {
-                length = range.Length;
+                length = range.Length - offset;
                 return _properties.Get(range);
             }
 
