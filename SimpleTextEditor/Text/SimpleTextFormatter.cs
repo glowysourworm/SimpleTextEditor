@@ -149,9 +149,7 @@ namespace SimpleTextEditor.Text
                 textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
                                                     characterOffset,                              // Character offset to ITextSource
                                                     _visualInputData.ConstraintSize.Width,        // UI Width
-                                                    _visualInputData
-                                                        .GetProperties(TextPropertySet.Normal)
-                                                        .ParagraphProperties,                     // Visual Properties (Default Properties)
+                                                    _visualInputData.DefaultParagraphProperties,  // Visual Properties (Default Properties)
                                                     lastLineBreak/*,                              // Last Line Break
                                                     _textRunCache*/);                             // TextRunCache (MSFT) stores output of formatter
 

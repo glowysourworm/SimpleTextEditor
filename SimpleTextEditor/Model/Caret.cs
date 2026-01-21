@@ -21,9 +21,9 @@ namespace SimpleTextEditor.Model
         }
 
         /// <summary>
-        /// Gets offset adjusted to the character in question (AppendPosition)
+        /// Gets offset adjusted to the character in question. This will remove the append position offset.
         /// </summary>
-        public int GetAdjustedOffset()
+        public int GetInputOffset()
         {
             switch (this.AppendPosition)
             {

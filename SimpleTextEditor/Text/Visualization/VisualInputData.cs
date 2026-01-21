@@ -2,22 +2,11 @@
 using System.Windows;
 using System.Windows.Media;
 
-using SimpleTextEditor.Text.Visualization.Interface;
-
-using SimpleWpf.SimpleCollections.Collection;
+using SimpleTextEditor.Model.Configuration;
+using SimpleTextEditor.Text.Visualization.Properties;
 
 namespace SimpleTextEditor.Text.Visualization
 {
-    /// <summary>
-    /// This is temporary for setting all of the MSFT readonly text properties. Use Cases:  Treating
-    /// portions of text as bold / highlighted / etc...
-    /// </summary>
-    public enum TextPropertySet
-    {
-        Normal = 0,
-        Highlighted = 1
-    }
-
     /// <summary>
     /// Visual input data - which may link directly to source indices. For now, this is just the
     /// MSFT input classes for the TextFormatter, and a few extra things for our renderer.
@@ -31,50 +20,63 @@ namespace SimpleTextEditor.Text.Visualization
         public double LineHeight { get; }
         public double Indent { get; }
 
-        SimpleDictionary<TextPropertySet, ITextProperties> _propertyDict;
+        public SimpleTextRunProperties DefaultProperties { get; }
+        public SimpleTextRunProperties DefaultHighlightProperties { get; }
 
-        public VisualInputData(Size constraintSize,
-                                         FontFamily fontFamily,
-                                         double fontSize,
-                                         Brush foreground,
-                                         Brush background,
-                                         Brush highlightBrush,
-                                         Brush highlightBackground,
-                                         TextWrapping textWrapping)
+        public SimpleTextParagraphProperties DefaultParagraphProperties { get; }
+
+        public VisualInputData(TextEditorConfiguration configuration, Size constraintSize)
         {
             this.ConstraintSize = constraintSize;
             this.LineHeight = 1.0D;
             this.Indent = 0.0D;
 
-            _propertyDict = new SimpleDictionary<TextPropertySet, ITextProperties>();
-
             // Typeface
-            var typeface = new Typeface(fontFamily, FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+            var typeface = CreateTypeface(configuration.DefaultProperties);
+            var typefaceHighlight = CreateTypeface(configuration.DefaultHighlightProperties);
 
             // TextRun Properties
-            var properties = new SimpleTextRunProperties(typeface, PixelsPerDip, fontSize, fontSize, null,
-                                                             foreground, background,
-                                                             BaselineAlignment.Baseline, CultureInfo.CurrentUICulture);
+            this.DefaultProperties = CreateProperties(typeface, configuration.DefaultProperties);
 
             // TextRun Properties (for highlighted text)
-            var highlightProperties = new SimpleTextRunProperties(typeface, PixelsPerDip, fontSize, fontSize, null,
-                                                                      highlightBrush, highlightBackground,
-                                                                      BaselineAlignment.Baseline, CultureInfo.CurrentUICulture);
+            this.DefaultHighlightProperties = CreateProperties(typefaceHighlight, configuration.DefaultHighlightProperties);
 
             // Paragraph Properties
-            var paragraphProperties = new SimpleTextParagraphProperties(FlowDirection.LeftToRight, TextAlignment.Left, false, false,
-                                                                properties, textWrapping, this.LineHeight, this.Indent);
-
-            var paragraphHighlightedProperties = new SimpleTextParagraphProperties(FlowDirection.LeftToRight, TextAlignment.Left, false, false,
-                                                                         highlightProperties, textWrapping, this.LineHeight, this.Indent);
-
-            _propertyDict.Add(TextPropertySet.Normal, new SimpleTextProperties(properties, paragraphProperties));
-            _propertyDict.Add(TextPropertySet.Highlighted, new SimpleTextProperties(highlightProperties, paragraphHighlightedProperties));
+            this.DefaultParagraphProperties = CreateParagraphProperties(configuration.TextWrapping, this.DefaultProperties);
         }
 
-        public ITextProperties GetProperties(TextPropertySet propertySet)
+        private Typeface CreateTypeface(TextProperties properties)
         {
-            return _propertyDict[propertySet];
+            return new Typeface(new FontFamily(properties.Font),
+                                               properties.FontStyle,
+                                               properties.FontWeight,
+                                               FontStretches.Normal,
+                                               new FontFamily(properties.Font));
+        }
+
+        private SimpleTextRunProperties CreateProperties(Typeface typeface, TextProperties properties)
+        {
+            return new SimpleTextRunProperties(typeface,
+                                               PixelsPerDip,
+                                               properties.FontSize,
+                                               properties.FontSize,
+                                               null,
+                                               properties.Foreground,
+                                               properties.Background,
+                                               BaselineAlignment.Baseline,
+                                               CultureInfo.CurrentUICulture);
+        }
+
+        private SimpleTextParagraphProperties CreateParagraphProperties(TextWrapping textWrapping, SimpleTextRunProperties properties)
+        {
+            return new SimpleTextParagraphProperties(FlowDirection.LeftToRight,
+                                                     TextAlignment.Left,
+                                                     false,
+                                                     false,
+                                                     properties,
+                                                     textWrapping,
+                                                     this.LineHeight,
+                                                     this.Indent);
         }
     }
 }

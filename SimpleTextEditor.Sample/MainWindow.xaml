@@ -9,6 +9,9 @@
                          FontSize="14"
                          Padding="0"
                          Background="White"
+                         Foreground="Black"
+                         TextHighlightBackground="DodgerBlue"
+                         TextHighlightForeground="White"
                          HorizontalAlignment="Stretch"
                          VerticalAlignment="Stretch"
                          IsEnabled="True" />

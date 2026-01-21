@@ -1,179 +1,59 @@
-﻿using System.Data;
-
-using SimpleTextEditor.Model;
+﻿using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
-using SimpleTextEditor.Text.Visualization.Interface;
-
-using SimpleWpf.SimpleCollections.Collection;
-using SimpleWpf.SimpleCollections.Extension;
 
 namespace SimpleTextEditor.Text.Source
 {
     public class LinearTextSource : ITextSource
     {
+        const char _EOL = '\r';
+
         // Primary text source
         private TextEditorString _source;
 
-        // Text Run properties for index ranges
-        private SimpleDictionary<IndexRange, ITextProperties> _propertyDict;
-
         // Defaults set by the control
         private readonly VisualInputData _visualInputData;
-        private readonly ITextProperties _defaultProperties;
 
         public LinearTextSource(VisualInputData visualInputData)
         {
             _source = new TextEditorString();
-            _propertyDict = new SimpleDictionary<IndexRange, ITextProperties>();
             _visualInputData = visualInputData;
-            _defaultProperties = visualInputData.GetProperties(TextPropertySet.Normal);
         }
 
         public void AppendText(string text)
         {
             _source.Concat(text.ToArray());
         }
-
-        public TextEditorString Get()
+        public char GetEOLCharacter()
         {
-            return _source;
+            return _EOL;
         }
         public char GetChar(int index)
         {
             return _source.Get()[index];
+        }
+        public char[] GetString()
+        {
+            return _source.Get();
+        }
+
+        public char[] GetString(int index, int count)
+        {
+            throw new NotImplementedException();
         }
         public int GetLength()
         {
             return _source.Length;
         }
 
+        public IndexRange GetRange()
+        {
+            return IndexRange.FromStartCount(0, _source.Length);
+        }
+
         public IList<char[]> GetTextLines(bool keepEOLCharacter)
         {
             return _source.Split('\r', keepEOLCharacter);
-        }
-
-        public IDictionary<IndexRange, ITextProperties> GetTextLineProperties(char[] textLine, int textLineOffset, int textLineCharacterOffset)
-        {
-            // Ranges with alternate properties
-            var propertyRanges = GetPropertySlices();
-
-            var currentLine = new string(textLine);
-            var propertiesDict = new SimpleDictionary<IndexRange, ITextProperties>();
-            var alternateOverlaps = new List<IndexRange>();
-            var currentRange = IndexRange.FromStartCount(textLineCharacterOffset, textLine.Length);
-
-            // Alternate Properties
-            foreach (var range in propertyRanges)
-            {
-                var overlap = range.GetOverlap(textLineCharacterOffset, textLineCharacterOffset + textLine.Length - 1);
-
-                // Found Sub-Section w/ Alternate Properties
-                //
-                if (overlap != null)
-                    alternateOverlaps.Add(overlap);
-            }
-
-            // Alternate Text
-            if (alternateOverlaps.Count > 0)
-            {
-                var startIndexes = alternateOverlaps.Select(x => x.StartIndex).ToList();
-                var endIndexes = alternateOverlaps.Select(x => x.EndIndex).ToList();
-                var splitIndices = startIndexes.Concat(endIndexes)
-                                               .Where(x => x > currentRange.StartIndex)         // Must split before the character
-                                               .Order()                                         // Must order split indices
-                                               .ToArray();
-
-                // Alternate Property Indices
-                var splits = currentRange.Split(splitIndices);
-
-                foreach (var range in splits)
-                {
-                    var length = 0;
-                    var properties = GetProperties(range.StartIndex, out length);
-
-                    // Create Formatted Text
-                    propertiesDict.Add(range, properties);
-                }
-            }
-
-            // Default Text
-            else
-            {
-                propertiesDict.Add(currentRange, _defaultProperties);
-            }
-
-            return propertiesDict;
-        }
-
-        public IndexRange GetNextPropertyRange(int offset, bool includeCurrentOffset)
-        {
-            // NOT INCLUDING
-            var pair = _propertyDict.FirstOrDefault(x => includeCurrentOffset ? x.Key.StartIndex >= offset : x.Key.StartIndex > offset);
-
-            if (pair.Key != null)
-                return pair.Key;
-
-            return null;
-        }
-
-        public ITextProperties GetProperties(int offset, out int length)
-        {
-            var pair = _propertyDict.FirstOrDefault(x => x.Key.Contains(offset));
-
-            // Default length to full unless properties are set
-            length = -1;
-
-            if (pair.Key != null && pair.Key.Contains(offset))
-            {
-                length = pair.Key.Length;
-                return pair.Value;
-            }
-
-
-            return _defaultProperties;
-        }
-
-        public void SetProperties(IndexRange range, TextPropertySet propertySet)
-        {
-            // Validate
-            if (!IndexRange.FromStartCount(0, _source.Length).Contains(range))
-                throw new IndexOutOfRangeException("Cannot set properties outside of source text index space. Be sure to check for EOL, or trailing paragraph character offsets");
-
-            // Affected Ranges (overlapping)
-            var affectedRanges = _propertyDict.Filter(x => x.Key.GetOverlap(range) != null);
-
-            foreach (var affected in affectedRanges)
-            {
-                // Remove
-                if (range.Contains(affected.Key))
-                    continue;
-
-                // Portion before start index
-                if (affected.Key.StartIndex < range.StartIndex)
-                {
-                    _propertyDict.Add(IndexRange.FromIndices(affected.Key.StartIndex, range.StartIndex), affected.Value);
-                }
-
-                // Portion after end index
-                if (affected.Key.EndIndex > range.EndIndex)
-                {
-                    _propertyDict.Add(IndexRange.FromIndices(range.EndIndex, affected.Key.EndIndex), affected.Value);
-                }
-            }
-
-            // New Properties
-            _propertyDict.Add(range, _visualInputData.GetProperties(propertySet));
-        }
-
-        public void ClearProperties()
-        {
-            _propertyDict.Clear();
-        }
-
-        public IndexRange[] GetPropertySlices()
-        {
-            return _propertyDict.Keys.ToArray();
         }
 
         public void InsertText(int offset, string text)
@@ -200,7 +80,6 @@ namespace SimpleTextEditor.Text.Source
         public void ClearText()
         {
             _source = new TextEditorString();
-            _propertyDict.Clear();
         }
 
         public override string ToString()

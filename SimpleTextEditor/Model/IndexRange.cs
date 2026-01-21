@@ -130,15 +130,6 @@ namespace SimpleTextEditor.Model
             return range1.StartIndex == range2.StartIndex && range1.EndIndex == range2.EndIndex;
         }
 
-        public static bool operator ==(IndexRange instance1, IndexRange instance2)
-        {
-            return ValueCompare(instance1, instance2);
-        }
-        public static bool operator !=(IndexRange instance1, IndexRange instance2)
-        {
-            return !ValueCompare(instance1, instance2);
-        }
-
         public override bool Equals(object? obj)
         {
             return ValueCompare(this, obj as IndexRange);

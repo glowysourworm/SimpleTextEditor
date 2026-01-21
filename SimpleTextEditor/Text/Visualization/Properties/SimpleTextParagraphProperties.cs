@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Media.TextFormatting;
 
-namespace SimpleTextEditor.Text.Visualization
+namespace SimpleTextEditor.Text.Visualization.Properties
 {
     /// <summary>
     /// Class to implement TextParagraphProperties, used by TextSource
@@ -12,7 +12,7 @@ namespace SimpleTextEditor.Text.Visualization
         private TextAlignment _textAlignment;
         private bool _firstLineInParagraph;
         private bool _alwaysCollapsible;
-        private TextRunProperties _defaultTextRunProperties;
+        private SimpleTextRunProperties _defaultTextRunProperties;
         private TextWrapping _textWrap;
         private double _indent;
         private double _paragraphIndent;
@@ -66,7 +66,7 @@ namespace SimpleTextEditor.Text.Visualization
                     TextAlignment textAlignment,
                     bool firstLineInParagraph,
                     bool alwaysCollapsible,
-                    TextRunProperties defaultTextRunProperties,
+                    SimpleTextRunProperties defaultTextRunProperties,
                     TextWrapping textWrap,
                     double lineHeight,
                     double indent)
@@ -79,6 +79,16 @@ namespace SimpleTextEditor.Text.Visualization
             _textWrap = textWrap;
             _lineHeight = lineHeight;
             _indent = indent;
+        }
+
+        public SimpleTextParagraphProperties CreateCopy()
+        {
+            return new SimpleTextParagraphProperties(_flowDirection,
+                                                     _textAlignment,
+                                                     _firstLineInParagraph,
+                                                     _alwaysCollapsible,
+                                                     _defaultTextRunProperties.CreateCopy(),
+                                                     _textWrap, _lineHeight, _indent);
         }
     }
 }

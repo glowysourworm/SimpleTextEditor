@@ -1,6 +1,8 @@
-﻿using SimpleTextEditor.Model.Interface;
+﻿using SimpleTextEditor.Model;
+using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
+using SimpleTextEditor.Text.Visualization.Properties;
 
 namespace SimpleTextEditor.Text.Interface
 {
@@ -11,6 +13,11 @@ namespace SimpleTextEditor.Text.Interface
     /// </summary>
     public interface ITextVisualCore : ITextVisualComponent
     {
+        /// <summary>
+        /// Returns the length of the primary text source
+        /// </summary>
+        int GetTextLength();
+
         /// <summary>
         /// Initializes the core with the constraint (control) size. This must be called prior to loading,
         /// modifying text, or retrieveing formatted text output.
@@ -39,5 +46,17 @@ namespace SimpleTextEditor.Text.Interface
         /// (Mutator) Removes all text from the text source. Returns the new caret position.
         /// </summary>
         ITextPosition ClearText();
+
+        /// <summary>
+        /// (Mutator) Modify text properties for a given range. Maintains text property collections.
+        /// </summary>
+        /// <param name="range">Text range to modify</param>
+        /// <param name="modifier">User function with which to modify the properties, which will create a copy to send to the user code.</param>
+        void ModifyTextRange(IndexRange range, Action<SimpleTextRunProperties> modifier);
+
+        /// <summary>
+        /// Clears all modified text property ranges (including selected text)
+        /// </summary>
+        void ClearTextProperties();
     }
 }

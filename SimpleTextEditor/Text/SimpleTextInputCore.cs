@@ -1,23 +1,26 @@
 ﻿using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 
 using SimpleTextEditor.Model;
 using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Source;
-using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
+using SimpleTextEditor.Text.Visualization.Properties;
 
 namespace SimpleTextEditor.Text
 {
     public class SimpleTextInputCore : ITextInputCore
     {
         // Primary Components
-        ITextSource _textSource;
         ITextVisualCore _visualCore;
 
         // Primary caret source
         Caret _caret;
+
+        // Primary selected text range
+        IndexRange? _selectedRange;
 
         // Mouse Data
         Point? _mouseDownPoint;
@@ -28,22 +31,24 @@ namespace SimpleTextEditor.Text
         {
             _caret = new Caret(0, Rect.Empty, AppendPosition.None);
             _mouseDownPoint = null;
+            _selectedRange = null;
 
             _initialized = false;
         }
 
         public void Initialize(VisualInputData inputData)
         {
-            _textSource = new LinearTextSource(inputData);
+            var textSource = new LinearTextSource(inputData);
             _visualCore = new SimpleTextVisualCore();
 
             // MSFT TextFormatter 
-            var textRunProvider = new SimpleTextRunProvider(_textSource);
+            var textPropertiesSource = new TextPropertiesSource(textSource, inputData.DefaultProperties, inputData.DefaultParagraphProperties);
+            var textRunProvider = new SimpleTextRunProvider(textSource, textPropertiesSource);
             var formatter = new SimpleTextFormatter();
 
             // Initialize Components
-            formatter.Initialize(textRunProvider, _textSource, inputData);
-            _visualCore.Initialize(formatter, _textSource, inputData);
+            formatter.Initialize(textRunProvider, textSource, inputData);
+            _visualCore.Initialize(formatter, textSource, inputData);
 
             _initialized = true;
         }
@@ -75,23 +80,26 @@ namespace SimpleTextEditor.Text
             if (!_initialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            var caretInvalid = false;
+            ITextPosition caretPosition = null;
 
             switch (input)
             {
                 case ControlInput.None:
                     break;
                 case ControlInput.Backspace:
-                    if (_textSource.GetLength() == 0)
+                    if (_visualCore.GetTextLength() == 0)
                         return false;
 
-                    _visualCore.RemoveText(_caret.GetAdjustedOffset(), 1);
+                    if (_caret.GetInputOffset() <= 0)
+                        return false;
+
+                    caretPosition = _visualCore.RemoveText(_caret.GetInputOffset(), 1);
                     break;
                 case ControlInput.DeleteCurrentCharacter:
-                    if (_caret.GetAdjustedOffset() + 1 >= _textSource.GetLength())
+                    if (_caret.GetInputOffset() + 1 >= _visualCore.GetTextLength())
                         return false;
 
-                    _visualCore.RemoveText(_caret.GetAdjustedOffset() + 1, 1);
+                    caretPosition = _visualCore.RemoveText(_caret.GetInputOffset() + 1, 1);
                     break;
                 case ControlInput.LineUp:
                     break;
@@ -121,23 +129,42 @@ namespace SimpleTextEditor.Text
                     throw new Exception("Unhandled Control Input:  SimpleTextVisualCore");
             }
 
+            if (caretPosition != null)
+                UpdateCaret(caretPosition);
+
             return _visualCore.IsInvalid;
         }
 
         public void Load(string text)
         {
+            if (!_initialized)
+                throw new Exception("SimpleTextInputCore not yet initialized");
+
             _visualCore.ClearText();
             _visualCore.AppendText(text);
         }
 
         public bool ProcessTextInputAtCaret(string text)
         {
+            if (!_initialized)
+                throw new Exception("SimpleTextInputCore not yet initialized");
+
+            // Procedure
+            //
+            // 1) Delete Selected Text
+            // 2) Process Append / Insert
+            // 3) Update Caret
+            //
+
+            var result = ProcessRemoveSelectedText();
+
             ITextPosition caretPosition = null;
 
-            if (_caret.AppendPosition == AppendPosition.Append)
+            if (_caret.GetInputOffset() == _visualCore.GetTextLength() - 1)
                 caretPosition = _visualCore.AppendText(text);
+
             else
-                caretPosition = _visualCore.InsertText(_caret.GetAdjustedOffset(), text);
+                caretPosition = _visualCore.InsertText(_caret.GetInputOffset(), text);
 
             UpdateCaret(caretPosition);
 
@@ -146,7 +173,17 @@ namespace SimpleTextEditor.Text
 
         public bool ProcessRemoveSelectedText()
         {
-            throw new NotImplementedException();
+            if (!_initialized)
+                throw new Exception("SimpleTextInputCore not yet initialized");
+
+            if (_selectedRange == null)
+                return false;
+
+            var caretPosition = _visualCore.RemoveText(_selectedRange.StartIndex, _selectedRange.Length);
+
+            UpdateCaret(caretPosition);
+
+            return _visualCore.IsInvalid;
         }
 
         public bool ProcessPreviewMouseMove(Point location, MouseButtonState leftButtonState, MouseButtonState rightButtonState)
@@ -202,8 +239,11 @@ namespace SimpleTextEditor.Text
                 // Move Caret
                 UpdateCaret(textPosition);
 
-                // Clear Selection
-                _textSource.ClearProperties();
+                // Clear selected range
+                _selectedRange = null;
+
+                // Clear Selection (text properties)
+                _visualCore.ClearTextProperties();
 
                 // TODO: Performance Optimization
                 _visualCore.Invalidate();
@@ -223,14 +263,17 @@ namespace SimpleTextEditor.Text
                 var startIndex = Math.Min(index1, index2);
                 var endIndex = Math.Max(index1, index2);
 
-                var selectRange = IndexRange.FromIndices(startIndex, endIndex);
+                _selectedRange = IndexRange.FromIndices(startIndex, endIndex);
 
                 // Move Caret
                 UpdateCaret(textPosition2);
 
                 // Highlight Selection
-                _textSource.ClearProperties();
-                _textSource.SetProperties(selectRange, TextPropertySet.Highlighted);
+                _visualCore.ClearTextProperties();
+                _visualCore.ModifyTextRange(_selectedRange, x =>
+                {
+                    x.Modify(x.Typeface, x.FontRenderingEmSize, Brushes.White, Brushes.Blue);
+                });
 
                 // TODO: Performance Optimization
                 _visualCore.Invalidate();

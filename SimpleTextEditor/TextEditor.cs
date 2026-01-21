@@ -7,12 +7,14 @@ using System.Windows.Media.TextFormatting;
 using SimpleTextEditor.Component;
 using SimpleTextEditor.Component.Interface;
 using SimpleTextEditor.Model;
+using SimpleTextEditor.Model.Configuration;
 using SimpleTextEditor.Text.Visualization;
 
 namespace SimpleTextEditor
 {
     public class TextEditor : Control
     {
+        #region (public) Dependency Properties
         public static readonly DependencyProperty FocusedBackgroundProperty =
             DependencyProperty.Register("FocusedBackground", typeof(Brush), typeof(TextEditor), new PropertyMetadata(Brushes.White));
 
@@ -25,6 +27,14 @@ namespace SimpleTextEditor
         public static readonly DependencyProperty CaretBrushProperty =
             DependencyProperty.Register("CaretBrush", typeof(Brush), typeof(TextEditor), new PropertyMetadata(Brushes.LightGray));
 
+        public static readonly DependencyProperty TextHighlightForegroundProperty =
+            DependencyProperty.Register("TextHighlightForeground", typeof(Brush), typeof(TextEditor));
+
+        public static readonly DependencyProperty TextHighlightBackgroundProperty =
+            DependencyProperty.Register("TextHighlightBackground", typeof(Brush), typeof(TextEditor));
+        #endregion
+
+        #region (public) Properties
         public Brush FocusedBackground
         {
             get { return (Brush)GetValue(FocusedBackgroundProperty); }
@@ -45,30 +55,46 @@ namespace SimpleTextEditor
             get { return (Brush)GetValue(CaretBrushProperty); }
             set { SetValue(CaretBrushProperty, value); }
         }
+        public Brush TextHighlightForeground
+        {
+            get { return (Brush)GetValue(TextHighlightForegroundProperty); }
+            set { SetValue(TextHighlightForegroundProperty, value); }
+        }
+        public Brush TextHighlightBackground
+        {
+            get { return (Brush)GetValue(TextHighlightBackgroundProperty); }
+            set { SetValue(TextHighlightBackgroundProperty, value); }
+        }
+        #endregion
 
         // Have to wait for control loading event to set the text properties
         IDocument? _document;
+
+        // Primary Configuration 
+        TextEditorConfiguration _configuration;
 
         public TextEditor()
         {
             this.Cursor = Cursors.IBeam;
 
             _document = null;
+            _configuration = new TextEditorConfiguration();
 
             this.Loaded += TextEditor_Loaded;
         }
 
         private void TextEditor_Loaded(object sender, RoutedEventArgs e)
         {
+            // Copy Font Settings -> Configuration
+            _configuration.DefaultProperties.SetFromControl(this);
+            _configuration.DefaultHighlightProperties.SetFromControl(this);
+
+            // Override bound properties
+            _configuration.DefaultHighlightProperties.Background = this.TextHighlightBackground;
+            _configuration.DefaultHighlightProperties.Foreground = this.TextHighlightForeground;
+
             _document = new Document();
-            _document.Initialize(new VisualInputData(this.RenderSize,
-                                                     this.FontFamily,
-                                                     this.FontSize,
-                                                     Brushes.Black,
-                                                     Brushes.Transparent,
-                                                     Brushes.White,
-                                                     Brushes.CadetBlue,
-                                                     TextWrapping.NoWrap));
+            _document.Initialize(new VisualInputData(_configuration, this.RenderSize));
 
             InvalidateVisual();
         }

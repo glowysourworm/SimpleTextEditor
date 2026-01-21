@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.Windows.Media.TextFormatting;
 
-using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization.Interface;
@@ -19,27 +18,14 @@ namespace SimpleTextEditor.Text
         // Text data structure for Get / Set (range). This may be upgraded to handle the 
         // rest of the text properties; and should use a common character array source. Currently,
         // the TextString is not shared between nodes.
-        private ITextSource _textSource;
+        readonly ITextSource _textSource;
+        readonly ITextPropertiesSource _textPropertiesSource;
 
-        //private string _currentLine;
-        //private int _textLineOffset;
-        //private int _textLineCharacterOffset;
-        //private IDictionary<IndexRange, ITextProperties> _textLineProperties;
 
-        public SimpleTextRunProvider(ITextSource textSource)
+        public SimpleTextRunProvider(ITextSource textSource, ITextPropertiesSource textPropertiesSource)
         {
             _textSource = textSource;
-        }
-
-        public void SetLineRunProperties(string currentLine,
-                                         int textLineOffset,
-                                         int textLineCharacterOffset,
-                                         IDictionary<IndexRange, ITextProperties> textLineProperties)
-        {
-            //_currentLine = currentLine;
-            //_textLineOffset = textLineOffset;
-            //_textLineCharacterOffset = textLineCharacterOffset;
-            //_textLineProperties = textLineProperties;
+            _textPropertiesSource = textPropertiesSource;
         }
 
         /// <summary>
@@ -60,7 +46,7 @@ namespace SimpleTextEditor.Text
 
             // Look for alternate properties also
             //
-            var nextPropertyRange = _textSource.GetNextPropertyRange(characterIndex, false);
+            var nextPropertyRange = _textPropertiesSource.GetNextModifiedRange(characterIndex, false);
 
             // HOW TO SIGNAL EOL FOR A SINGLE TEXT LINE!
             //
@@ -71,7 +57,7 @@ namespace SimpleTextEditor.Text
 
             // These will be caught by the formatter so that the text measurement
             // can know where it is vertically.
-            if (_textSource.Get().Get()[characterIndex] == '\r')
+            if (_textSource.GetChar(characterIndex) == _textSource.GetEOLCharacter())
             {
                 return new TextEndOfLine(1);
             }
@@ -80,7 +66,7 @@ namespace SimpleTextEditor.Text
             if (characterIndex < _textSource.GetLength())
             {
                 var currentPropertyLength = 0;
-                var currentProperties = _textSource.GetProperties(characterIndex, out currentPropertyLength);
+                var currentProperties = _textPropertiesSource.GetProperties(characterIndex, out currentPropertyLength);
 
                 // Render Length:  This will make sure to render the current character, up to but NOT INCLUDING, the EOL character.
                 //                 The EOL character will be renedered on the next call to the GetTextRun method, which will get 
@@ -124,10 +110,10 @@ namespace SimpleTextEditor.Text
                 // TextCharacters requires an absolute index into the char[]. There may be a way to utilize char* for 
                 // better (native) performance; but that would take some testing and playing around.
                 //
-                return new TextCharacters(_textSource.Get().Get(),
+                return new TextCharacters(_textSource.GetString(),
                                           characterIndex,
                                           renderLength,
-                                          currentProperties.Properties);
+                                          currentProperties);
             }
 
             // Return an end-of-paragraph if no more text source.
@@ -137,7 +123,7 @@ namespace SimpleTextEditor.Text
         public override TextSpan<CultureSpecificCharacterBufferRange> GetPrecedingText(int characterIndexLimit)
         {
             // TextString.Get() returns a char[] for the text source w/o copying memory
-            var bufferRange = new CharacterBufferRange(_textSource.Get().Get(), 0, characterIndexLimit);
+            var bufferRange = new CharacterBufferRange(_textSource.GetString(), 0, characterIndexLimit);
 
             return new TextSpan<CultureSpecificCharacterBufferRange>(characterIndexLimit, new CultureSpecificCharacterBufferRange(CultureInfo.CurrentUICulture, bufferRange));
         }

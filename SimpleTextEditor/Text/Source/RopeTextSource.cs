@@ -1,7 +1,5 @@
 ﻿using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Source.Interface;
-using SimpleTextEditor.Text.Visualization;
-using SimpleTextEditor.Text.Visualization.Interface;
 
 namespace SimpleTextEditor.Text.Source
 {
@@ -55,37 +53,32 @@ namespace SimpleTextEditor.Text.Source
             throw new NotImplementedException();
         }
 
-        public IndexRange GetNextPropertyRange(int offset, bool includeCurrentOffset)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ITextProperties GetProperties(int offset, out int length)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetProperties(IndexRange range, ITextProperties properties)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void ClearProperties()
-        {
-            throw new NotImplementedException();
-        }
-
-        public IDictionary<IndexRange, ITextProperties> GetTextLineProperties(char[] textLine, int textLineOffset, int textLineCharacterOffset)
-        {
-            throw new NotImplementedException();
-        }
-
-        public void SetProperties(IndexRange range, TextPropertySet propertySet)
+        public IndexRange GetNextModifiedRange(int offset, bool includeCurrentOffset)
         {
             throw new NotImplementedException();
         }
 
         public void ClearText()
+        {
+            throw new NotImplementedException();
+        }
+
+        public char GetEOLCharacter()
+        {
+            throw new NotImplementedException();
+        }
+
+        public char[] GetString()
+        {
+            throw new NotImplementedException();
+        }
+
+        public char[] GetString(int index, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IndexRange GetRange()
         {
             throw new NotImplementedException();
         }
