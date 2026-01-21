@@ -35,7 +35,10 @@ namespace SimpleTextEditor.Text
         {
             return _source;
         }
-
+        public char GetChar(int index)
+        {
+            return _source.Get()[index];
+        }
         public int GetLength()
         {
             return _source.Length;
@@ -107,7 +110,7 @@ namespace SimpleTextEditor.Text
             if (pair.Key != null)
                 return pair.Key;
 
-            return IndexRange.Empty;
+            return null;
         }
 
         public ITextProperties GetProperties(int offset, out int length)
@@ -119,7 +122,7 @@ namespace SimpleTextEditor.Text
 
             if (pair.Key != null && pair.Key.Contains(offset))
             {
-                length = pair.Key.Count;
+                length = pair.Key.Length;
                 return pair.Value;
             }
 
@@ -184,6 +187,11 @@ namespace SimpleTextEditor.Text
             }
 
             return -1;
+        }
+
+        public override string ToString()
+        {
+            return string.Format("Length={0} Text={1}", _source.Length, _source.ToString());
         }
     }
 }

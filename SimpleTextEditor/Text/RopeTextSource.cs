@@ -21,7 +21,10 @@ namespace SimpleTextEditor.Text
         {
             return _rope.Get();
         }
-
+        public char GetChar(int index)
+        {
+            return _rope.Get().Get()[index];
+        }
         public int GetLength()
         {
             return _rope.GetLength();

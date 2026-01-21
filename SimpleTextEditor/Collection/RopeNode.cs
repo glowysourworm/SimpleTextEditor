@@ -376,7 +376,7 @@ namespace SimpleTextEditor.Collection
             if (leftOverlap != null)
             {
                 // Remove Left Portion
-                reinitializeRequired = _left.Remove(leftOverlap.StartIndex, leftOverlap.Count);
+                reinitializeRequired = _left.Remove(leftOverlap.StartIndex, leftOverlap.Length);
             }
 
             // -> Right (Add index offset for the right to match the input range)
@@ -384,7 +384,7 @@ namespace SimpleTextEditor.Collection
             {
                 var adjustedOverlap = rightOverlap.Subtract(_left.Content.Length);
 
-                reinitializeRequired = _right.Remove(adjustedOverlap.StartIndex, adjustedOverlap.Count);
+                reinitializeRequired = _right.Remove(adjustedOverlap.StartIndex, adjustedOverlap.Length);
             }
 
             // Leaf:  This remove will happen regardless. The left or right will be tallied here to see

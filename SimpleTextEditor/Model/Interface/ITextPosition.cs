@@ -5,28 +5,28 @@
         /// <summary>
         /// Offset into the text source for this position (character)
         /// </summary>
-        int SourceOffset { get; }
+        int Offset { get; }
 
         /// <summary>
         /// Index for the element in the visual elements collection
         /// </summary>
-        int ElementIndex { get; }
+        int VisualElementIndex { get; }
 
         /// <summary>
         /// Offset into the text source for this position's line number
         /// </summary>
-        int SourceLineNumber { get; }
+        int LineNumber { get; }
 
         /// <summary>
-        /// This situation occurs when there is a line break. The character
-        /// was followed by either a line break, or a special return character \r
+        /// Is there a special case for this text position? Is this instance being used 
+        /// for appending the caret?
         /// </summary>
-        bool IsAtEndOfLine { get; }
+        AppendPosition AppendPosition { get; }
 
         /// <summary>
         /// Visual column for this text position
         /// </summary>
-        int VisualColumn { get; }
+        int VisualColumnNumber { get; }
 
         /// <summary>
         /// Visual line number for this text position
@@ -37,5 +37,14 @@
         /// Paragraph number for this text position
         /// </summary>
         int ParagraphNumber { get; }
+
+        /// <summary>
+        /// Returns a new text position with a new append position parameter. Setting modifyOffset 
+        /// to true will force the ITextPosition to supply a new Offset parameter (to the return
+        /// value) if the append position is changed from its previous value; and only for the 
+        /// change implied by the AppendPosition parameter (+1 for Append, or -1 for not Append, 
+        /// if it was previously set to Append)
+        /// </summary>
+        ITextPosition AsAppend(AppendPosition newAppendPosition, bool modifyOffset);
     }
 }

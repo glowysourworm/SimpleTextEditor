@@ -6,18 +6,18 @@ namespace SimpleTextEditor.Model
     {
         public Rect VisualBounds { get; private set; }
         public int SourceOffset { get; private set; }
-        public bool IsAppendPosition { get; private set; }
+        public AppendPosition AppendPosition { get; private set; }
 
-        public Caret(int sourceOffset, Rect visualBounds, bool isAppendPosition)
+        public Caret(int sourceOffset, Rect visualBounds, AppendPosition appendPosition)
         {
-            Update(sourceOffset, visualBounds, isAppendPosition);
+            Update(sourceOffset, visualBounds, appendPosition);
         }
 
-        public void Update(int sourceOffset, Rect visualBounds, bool isAppendPosition)
+        public void Update(int sourceOffset, Rect visualBounds, AppendPosition appendPosition)
         {
             this.VisualBounds = visualBounds;
             this.SourceOffset = sourceOffset;
-            this.IsAppendPosition = isAppendPosition;
+            this.AppendPosition = appendPosition;
         }
     }
 }

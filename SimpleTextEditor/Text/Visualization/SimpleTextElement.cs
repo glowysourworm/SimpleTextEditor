@@ -24,17 +24,17 @@ namespace SimpleTextEditor.Text.Visualization
             this.End = endPosition;
             this.VisualBounds = visualBounds;
             this.Element = textElement;
-            this.Length = this.End.SourceOffset - this.Start.SourceOffset + 1;
+            this.Length = this.End.Offset - this.Start.Offset + 1;
         }
 
         public bool Contains(ITextPosition position)
         {
-            return this.Start.SourceOffset <= position.SourceOffset && this.End.SourceOffset >= position.SourceOffset;
+            return this.Start.Offset <= position.Offset && this.End.Offset >= position.Offset;
         }
 
         public bool Contains(int offset)
         {
-            return this.Start.SourceOffset <= offset && this.End.SourceOffset >= offset;
+            return this.Start.Offset <= offset && this.End.Offset >= offset;
         }
     }
 }

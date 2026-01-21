@@ -7,6 +7,7 @@ namespace SimpleTextEditor.Text.Interface
         const char EndOfLineCharacter = '\r';
 
         TextEditorString Get();
+        char GetChar(int index);
         int GetLength();
         void AppendText(string text);
         void InsertText(int offset, string text);

@@ -52,6 +52,9 @@ namespace SimpleTextEditor.Text
         /// </summary>
         public override TextRun GetTextRun(int characterIndex)
         {
+            if (characterIndex > _textSource.GetLength())
+                throw new Exception("TEXT FORMATTING EXCEPTION");
+
             // This will be needed to know how much text to output this call
             //
             var nextEOLIndex = characterIndex >= _textSource.GetLength() ? -1 : _textSource.Search('\r', characterIndex);
@@ -64,7 +67,7 @@ namespace SimpleTextEditor.Text
             //
             // https://learn.microsoft.com/en-us/dotnet/desktop/wpf/advanced/advanced-text-formatting
             //
-            if (characterIndex == _textSource.GetLength())
+            if (characterIndex >= _textSource.GetLength())
                 return new TextEndOfParagraph(1);
 
             // These will be caught by the formatter so that the text measurement
@@ -91,7 +94,7 @@ namespace SimpleTextEditor.Text
                 var renderLength = _textSource.GetLength() - characterIndex;
 
                 // Next Alternate Character Properties
-                if (nextPropertyRange != IndexRange.Empty)
+                if (nextPropertyRange != null)
                 {
                     // EOL happens first
                     if (nextEOLIndex >= 0 && nextEOLIndex < nextPropertyRange.StartIndex)

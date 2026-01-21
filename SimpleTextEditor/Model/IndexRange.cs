@@ -4,16 +4,9 @@ namespace SimpleTextEditor.Model
 {
     public class IndexRange
     {
-        /// <summary>
-        /// Recalls the static instance of an empty IndexRange. This is initialized to (-1,-1) which will
-        /// even avoid value equality using the Equals method, which is not needed to do. The operators
-        /// == and != are overloaded to check instance equality for using IndexRange.Empty.
-        /// </summary>
-        public static IndexRange Empty = new IndexRange(-1, -1);
-
         public int StartIndex { get; private set; }
         public int EndIndex { get; private set; }
-        public int Count { get { return this.EndIndex - this.StartIndex + 1; } }
+        public int Length { get { return this.EndIndex - this.StartIndex + 1; } }
 
         private IndexRange(int startIndex, int endIndex)
         {
@@ -126,26 +119,29 @@ namespace SimpleTextEditor.Model
             return null;
         }
 
+        protected static bool ValueCompare(IndexRange range1, IndexRange range2)
+        {
+            if (ReferenceEquals(range1, null))
+                return ReferenceEquals(range2, null);
+
+            if (ReferenceEquals(range2, null))
+                return ReferenceEquals(range1, null);
+
+            return range1.StartIndex == range2.StartIndex && range1.EndIndex == range2.EndIndex;
+        }
+
         public static bool operator ==(IndexRange instance1, IndexRange instance2)
         {
-            return ReferenceEquals(instance1, instance2);
+            return ValueCompare(instance1, instance2);
         }
         public static bool operator !=(IndexRange instance1, IndexRange instance2)
         {
-            return !ReferenceEquals(instance1, instance2);
+            return !ValueCompare(instance1, instance2);
         }
 
         public override bool Equals(object? obj)
         {
-            if (obj == null)
-                return false;
-
-            var range = obj as IndexRange;
-
-            if (range == null)
-                return false;
-
-            return range.StartIndex == this.StartIndex && range.EndIndex == this.EndIndex;
+            return ValueCompare(this, obj as IndexRange);
         }
 
         public override int GetHashCode()
