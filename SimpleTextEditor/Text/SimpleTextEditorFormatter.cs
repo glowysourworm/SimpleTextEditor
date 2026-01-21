@@ -153,10 +153,15 @@ namespace SimpleTextEditor.Text
 
                 // Text Position (AppendPosition is only used for the caret)
                 var startPosition = new TextPosition(characterOffset, textElements.Count, AppendPosition.None, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
-                var endPosition = new TextPosition(characterOffset + textElement.Length - 1, textElements.Count, AppendPosition.None, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
+                var endPosition = new TextPosition(characterOffset + textElement.Length - 1, textElements.Count, textEOP > 0 ? AppendPosition.Append : AppendPosition.None, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
 
                 // Next Element
+                //if (textEOP <= 0)
                 textElements.Add(new SimpleTextElement(textElement, textVisualBounds, startPosition, endPosition));
+
+                // NOT ADDING THE FINAL PARAGRAPH TEXT ELEMENT
+                //else
+                //textElements.Add(new SimpleTextElement(textElement, textVisualBounds, startPosition, startPosition));
 
                 // Increment Indices
                 characterOffset += textElement.Length;
@@ -281,7 +286,7 @@ namespace SimpleTextEditor.Text
                 {
                     appendPosition = AppendPosition.EndOfLine;
 
-                    return _lastOutputData.VisualElements.Last().End.AsAppend(appendPosition, false);
+                    return _lastOutputData.VisualElements.Last().End.AsAppend(appendPosition, true);
                 }
 
                 // Search glyph run to see where point lies

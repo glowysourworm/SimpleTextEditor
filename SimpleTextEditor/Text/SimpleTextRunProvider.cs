@@ -52,9 +52,6 @@ namespace SimpleTextEditor.Text
         /// </summary>
         public override TextRun GetTextRun(int characterIndex)
         {
-            if (characterIndex > _textSource.GetLength())
-                throw new Exception("TEXT FORMATTING EXCEPTION");
-
             // This will be needed to know how much text to output this call
             //
             var nextEOLIndex = characterIndex >= _textSource.GetLength() ? -1 : _textSource.Search('\r', characterIndex);
@@ -115,6 +112,12 @@ namespace SimpleTextEditor.Text
                 }
                 else
                     renderLength = _textSource.GetLength() - characterIndex;
+
+                // VALIDATE
+                if (renderLength > _textSource.GetLength() - characterIndex)
+                {
+                    throw new Exception("SimpleTextRunProvider rendering index out of range");
+                }
 
                 // TextCharacters requires an absolute index into the char[]. There may be a way to utilize char* for 
                 // better (native) performance; but that would take some testing and playing around.

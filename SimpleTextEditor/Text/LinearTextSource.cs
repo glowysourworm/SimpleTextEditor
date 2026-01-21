@@ -132,6 +132,10 @@ namespace SimpleTextEditor.Text
 
         public void SetProperties(IndexRange range, ITextProperties properties)
         {
+            // Validate
+            if (!IndexRange.FromStartCount(0, _source.Length).Contains(range))
+                throw new IndexOutOfRangeException("Cannot set properties outside of source text index space. Be sure to check for EOL, or trailing paragraph character offsets");
+
             // Affected Ranges (overlapping)
             var affectedRanges = _propertyDict.Filter(x => x.Key.GetOverlap(range) != null);
 

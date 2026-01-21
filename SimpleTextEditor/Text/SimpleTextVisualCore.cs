@@ -212,7 +212,8 @@ namespace SimpleTextEditor.Text
                     var startIndex = Math.Min(textPosition1.Offset, textPosition2.Offset);
                     var endIndex = Math.Max(textPosition1.Offset, textPosition2.Offset);
 
-                    var selectRange = IndexRange.FromIndices(startIndex, endIndex);
+                    var selectRange = IndexRange.FromIndices(appendPosition1 == AppendPosition.Append ? startIndex - 1 : startIndex,
+                                                             appendPosition2 == AppendPosition.Append ? endIndex - 1 : endIndex);
 
                     // Move Caret
                     UpdateCaret(textPosition2, appendPosition2);
