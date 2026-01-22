@@ -184,7 +184,9 @@ namespace SimpleTextEditor.Text
                                                      textElements.Count,                                // Element Index
                                                      AppendPosition.None);                              // Append Position
 
-                var endPosition = TextPosition.FromLine(startPosition, characterOffset + textElement.Length - 1, characterOffset - lastLineCharacterOffset + 1);
+                // This should be the append position (NEED TO FIX EOL / EOP ISSUE!)
+                var endPosition = TextPosition.FromLine(startPosition, characterOffset + textElement.Length - 1, characterOffset - lastLineCharacterOffset + 1)
+                                              .AsAppend(endAppend, false);
 
                 // Next Element
                 //if (textEOP <= 0)

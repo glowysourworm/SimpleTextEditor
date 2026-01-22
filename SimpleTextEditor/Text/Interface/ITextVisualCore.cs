@@ -56,6 +56,11 @@ namespace SimpleTextEditor.Text.Interface
         void ModifyTextRange(IndexRange range, Action<SimpleTextRunProperties> modifier);
 
         /// <summary>
+        /// Removes alternate properties in affected range
+        /// </summary>
+        public void ClearAffectedTextProperties(IndexRange range);
+
+        /// <summary>
         /// Clears all modified text property ranges (including selected text)
         /// </summary>
         void ClearTextProperties();

@@ -34,6 +34,16 @@ namespace SimpleTextEditor.Text.Visualization.Properties
             _paragraphProperties.Clear();
         }
 
+        public void ClearAffectedProperties(IndexRange range)
+        {
+            var affectedKeys = _properties.FindKeys(x => x.GetOverlap(range) != null);
+
+            foreach (var key in affectedKeys)
+            {
+                _properties.Remove(key);
+            }
+        }
+
         public IndexRange GetNextModifiedRange(int offset, bool includeCurrentOffset)
         {
             // NOT INCLUDING

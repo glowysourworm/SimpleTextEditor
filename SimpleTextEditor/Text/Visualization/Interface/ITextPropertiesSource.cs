@@ -18,6 +18,11 @@ namespace SimpleTextEditor.Text.Visualization.Interface
         void SetParagraphProperties(int paragraphNumber, Func<SimpleTextParagraphProperties, SimpleTextParagraphProperties> modifier);
 
         /// <summary>
+        /// Sets default text settings for any characters in the provided range
+        /// </summary>
+        void ClearAffectedProperties(IndexRange range);
+
+        /// <summary>
         /// Clears alternate text properties for the entire text
         /// </summary>
         void ClearProperties();

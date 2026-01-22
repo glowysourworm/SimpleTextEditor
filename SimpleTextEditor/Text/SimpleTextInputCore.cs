@@ -180,17 +180,11 @@ namespace SimpleTextEditor.Text
             if (_selectedRange == null)
                 return false;
 
-            // De-Select Text (other properties should be left as they were)
-            _visualCore.ModifyTextRange(_selectedRange, x =>
-            {
-                x.Modify(x.Typeface,
-                         x.FontRenderingEmSize,
-                         _visualInputData.DefaultProperties.ForegroundBrush,
-                         _visualInputData.DefaultProperties.BackgroundBrush);
-            });
-
             // Remove Text
             var caretPosition = _visualCore.RemoveText(_selectedRange.StartIndex, _selectedRange.Length);
+
+            // De-Select Text (other properties should be left as they were)
+            _visualCore.ClearAffectedTextProperties(_selectedRange);
 
             // Reset Selection Range
             _selectedRange = null;

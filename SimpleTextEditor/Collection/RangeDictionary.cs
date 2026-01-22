@@ -1,5 +1,6 @@
 ﻿using SimpleTextEditor.Model;
 
+using SimpleWpf.Extensions.Collection;
 using SimpleWpf.SimpleCollections.Collection;
 using SimpleWpf.SimpleCollections.Extension;
 
@@ -33,6 +34,11 @@ namespace SimpleTextEditor.Collection
             _dictionary[indexRange] = value;
         }
 
+        public void Remove(K key)
+        {
+            _dictionary.Remove(ToIndexRange(key));
+        }
+
         /// <summary>
         /// Returns key for index range if it exists
         /// </summary>
@@ -60,6 +66,16 @@ namespace SimpleTextEditor.Collection
                 return FromIndexRange(pair.Key);
 
             return FromIndexRange(pair.Key);
+        }
+
+        /// <summary>
+        /// Finds keys from the provided predicate
+        /// </summary>
+        public IEnumerable<K> FindKeys(Func<K, bool> keyPredicate)
+        {
+            return _dictionary.Where(x => keyPredicate(FromIndexRange(x.Key)))
+                              .Select(x => FromIndexRange(x.Key))
+                              .Actualize();
         }
 
         /// <summary>

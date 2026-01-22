@@ -149,6 +149,14 @@ namespace SimpleTextEditor.Text
             _formatter.Invalidate();
         }
 
+        public void ClearAffectedTextProperties(IndexRange range)
+        {
+            if (!_formatter.IsInitialized)
+                throw new Exception("SimpleTextVisualCore not yet initialized");
+
+            _propertiesSource.ClearAffectedProperties(range);
+        }
+
         public void ClearTextProperties()
         {
             if (!_formatter.IsInitialized)
