@@ -3,7 +3,7 @@ using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Source.Interface;
-using SimpleTextEditor.Text.Visualization.Interface;
+using SimpleTextEditor.Text.Visualization.Properties.Interface;
 
 namespace SimpleTextEditor.Text
 {
@@ -42,7 +42,7 @@ namespace SimpleTextEditor.Text
         {
             // This will be needed to know how much text to output this call
             //
-            var nextEOLIndex = characterIndex >= _textSource.GetLength() ? -1 : _textSource.Search('\r', characterIndex);
+            var nextEOLIndex = _textSource.Search('\r', characterIndex);
 
             // Look for alternate properties also
             //

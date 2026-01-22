@@ -29,7 +29,7 @@ namespace SimpleTextEditor.Text
 
         public SimpleTextInputCore()
         {
-            _caret = new Caret(0, Rect.Empty, AppendPosition.None);
+            _caret = new Caret(null, Rect.Empty, CaretPosition.BeforeCharacter);
             _mouseDownPoint = null;
             _selectedRange = null;
 
@@ -81,7 +81,7 @@ namespace SimpleTextEditor.Text
             if (!_initialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
 
-            ITextPosition caretPosition = null;
+            ITextPosition? caretPosition = null;
 
             switch (input)
             {
@@ -91,20 +91,22 @@ namespace SimpleTextEditor.Text
                     if (_visualCore.GetTextLength() == 0)
                         return false;
 
-                    if (_caret.GetInputOffset() <= 0)
+                    if (_caret.Position.Offset <= 0)
                         return false;
 
-                    caretPosition = _visualCore.RemoveText(_caret.GetInputOffset(), 1);
+                    caretPosition = _visualCore.RemoveText(_caret.Position.Offset, 1);
                     break;
                 case ControlInput.DeleteCurrentCharacter:
-                    if (_caret.GetInputOffset() + 1 >= _visualCore.GetTextLength())
+                    if (_caret.Position.Offset + 1 >= _visualCore.GetTextLength())
                         return false;
 
-                    caretPosition = _visualCore.RemoveText(_caret.GetInputOffset() + 1, 1);
+                    caretPosition = _visualCore.RemoveText(_caret.Position.Offset + 1, 1);
                     break;
                 case ControlInput.LineUp:
+                    caretPosition = _visualCore.GetOutput().GetLastLineAtColumn(_caret.Position);
                     break;
                 case ControlInput.LineDown:
+                    caretPosition = _visualCore.GetOutput().GetNextLineAtColumn(_caret.Position);
                     break;
                 case ControlInput.CharacterLeft:
                     break;
@@ -131,7 +133,7 @@ namespace SimpleTextEditor.Text
             }
 
             if (caretPosition != null)
-                UpdateCaret(caretPosition);
+                UpdateCaret(caretPosition, _caret.CaretPosition);
 
             return _visualCore.IsInvalid;
         }
@@ -159,15 +161,15 @@ namespace SimpleTextEditor.Text
 
             var result = ProcessRemoveSelectedText();
 
-            ITextPosition caretPosition = null;
+            ITextPosition? caretPosition = null;
 
-            if (_caret.GetInputOffset() == _visualCore.GetTextLength() - 1)
+            if (_caret.Position.Offset == _visualCore.GetTextLength() - 1)
                 caretPosition = _visualCore.AppendText(text);
 
             else
-                caretPosition = _visualCore.InsertText(_caret.GetInputOffset(), text);
+                caretPosition = _visualCore.InsertText(_caret.Position.Offset, text);
 
-            UpdateCaret(caretPosition);
+            UpdateCaret(caretPosition, CaretPosition.BeforeCharacter);
 
             return _visualCore.IsInvalid;
         }
@@ -189,7 +191,7 @@ namespace SimpleTextEditor.Text
             // Reset Selection Range
             _selectedRange = null;
 
-            UpdateCaret(caretPosition);
+            UpdateCaret(caretPosition, CaretPosition.BeforeCharacter);
 
             return _visualCore.IsInvalid;
         }
@@ -242,10 +244,11 @@ namespace SimpleTextEditor.Text
             if (_mouseDownPoint == null ||
                 _mouseDownPoint.Value.Equals(currentLocation))
             {
-                var textPosition = _visualCore.GetOutput().VisualPointToTextPosition(currentLocation);
+                var caretPosition = CaretPosition.BeforeCharacter;
+                var textPosition = _visualCore.GetOutput().VisualPointToTextPosition(currentLocation, out caretPosition);
 
                 // Move Caret
-                UpdateCaret(textPosition);
+                UpdateCaret(textPosition, caretPosition);
 
                 // Clear selected range
                 _selectedRange = null;
@@ -262,19 +265,26 @@ namespace SimpleTextEditor.Text
             // Click Drag
             else
             {
-                var textPosition1 = _visualCore.GetOutput().VisualPointToTextPosition(_mouseDownPoint.Value);
-                var textPosition2 = _visualCore.GetOutput().VisualPointToTextPosition(currentLocation);
+                var caretPosition1 = CaretPosition.BeforeCharacter;
+                var caretPosition2 = CaretPosition.BeforeCharacter;
 
-                var index1 = textPosition1.AppendPosition == AppendPosition.Append ? textPosition1.Offset - 1 : textPosition1.Offset;
-                var index2 = textPosition2.AppendPosition == AppendPosition.Append ? textPosition2.Offset - 1 : textPosition2.Offset;
+                var textPosition1 = _visualCore.GetOutput().VisualPointToTextPosition(_mouseDownPoint.Value, out caretPosition1);
+                var textPosition2 = _visualCore.GetOutput().VisualPointToTextPosition(currentLocation, out caretPosition2);
 
-                var startIndex = Math.Min(index1, index2);
-                var endIndex = Math.Max(index1, index2);
+                //var index1 = caretPosition1 == CaretPosition.BeforeCharacter ? textPosition1.Offset : textPosition1.Offset + 1;
+                //var index2 = caretPosition2 == CaretPosition.BeforeCharacter ? textPosition2.Offset : textPosition2.Offset + 1;
+
+                var startIndex = Math.Min(textPosition1.Offset, textPosition2.Offset);
+                var endIndex = Math.Max(textPosition1.Offset, textPosition2.Offset);
+
+                // Nothing to select yet
+                if (startIndex == endIndex)
+                    return false;
 
                 _selectedRange = IndexRange.FromIndices(startIndex, endIndex);
 
                 // Move Caret
-                UpdateCaret(textPosition2);
+                UpdateCaret(textPosition2, caretPosition2);
 
                 // Highlight Selection
                 _visualCore.ClearTextProperties();
@@ -296,13 +306,17 @@ namespace SimpleTextEditor.Text
         /// <summary>
         /// Caret position may be one greater than previous text, putting it in the visual line's "append position"
         /// </summary>
-        private void UpdateCaret(ITextPosition textPosition)
+        private void UpdateCaret(ITextPosition? textPosition, CaretPosition caretPosition)
         {
-            // Update Caret Position
-            var caretOrigin = _visualCore.GetOutput().CharacterOffsetToVisualOffset(textPosition.Offset, textPosition.AppendPosition);
-            var textHeight = _visualCore.GetOutput().GetVisualLineHeight(textPosition.VisualLineNumber);
+            // Using ITextPosition.IsEmpty() to check for ITextSource being empty string
+            //
+            var position = textPosition == null ? TextPosition.CreateEmpty() : textPosition;
 
-            _caret.Update(textPosition.Offset, new Rect(caretOrigin, new Size(2, textHeight)), textPosition.AppendPosition);
+            // Update Caret Position
+            var caretOrigin = _visualCore.GetOutput().CharacterOffsetToVisualOffset(position.Offset, caretPosition);
+            var textHeight = _visualCore.GetOutput().GetVisualLineHeight(position.VisualLineNumber);
+
+            _caret.Update(textPosition, new Rect(caretOrigin, new Size(2, textHeight)), caretPosition);
         }
         #endregion
     }

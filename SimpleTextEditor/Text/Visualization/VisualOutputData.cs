@@ -4,9 +4,6 @@ namespace SimpleTextEditor.Text.Visualization
 {
     public class VisualOutputData
     {
-        // Visual lines for the visualization
-        List<SimpleTextElement> _visualElements;
-
         /// <summary>
         /// Render size constraint from the control
         /// </summary>
@@ -30,20 +27,14 @@ namespace SimpleTextEditor.Text.Visualization
         /// <summary>
         /// Returns collection of visual elements
         /// </summary>
-        public IEnumerable<SimpleTextElement> VisualElements { get { return _visualElements; } }
+        public VisualTextCollection VisualCollection { get; }
 
-        public VisualOutputData(IEnumerable<SimpleTextElement> visualElements, Size constraint, Size desiredSize, int sourceLength)
+        public VisualOutputData(VisualTextCollection visualCollection, Size constraint, Size desiredSize, int sourceLength)
         {
             this.ConstraintSize = constraint;
             this.DesiredSize = desiredSize;
             this.SourceLength = sourceLength;
-
-            _visualElements = new List<SimpleTextElement>(visualElements);
-        }
-
-        public SimpleTextElement GetElement(int index)
-        {
-            return _visualElements[index];
+            this.VisualCollection = visualCollection;
         }
     }
 }

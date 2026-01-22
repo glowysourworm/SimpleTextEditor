@@ -71,9 +71,9 @@ namespace SimpleTextEditor.Component
             _core.ProcessTextInputAtCaret(inputText);
         }
 
-        public IEnumerable<SimpleTextElement> GetVisualElements()
+        public VisualTextCollection GetVisualText()
         {
-            return _core.GetOutput().VisualElements;
+            return _core.GetOutput().VisualCollection;
         }
         #endregion
     }

@@ -2,7 +2,7 @@
 
 using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Source.Interface;
-using SimpleTextEditor.Text.Visualization.Interface;
+using SimpleTextEditor.Text.Visualization.Properties.Interface;
 
 namespace SimpleTextEditor.Text.Visualization.Properties
 {

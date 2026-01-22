@@ -6,6 +6,7 @@ using SimpleTextEditor.Model;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
+using SimpleTextEditor.Text.Visualization.Element;
 
 namespace SimpleTextEditor.Text
 {
@@ -125,8 +126,9 @@ namespace SimpleTextEditor.Text
             // 4) Call FormatLine (2nd Pass):  This will be the output, if it was needed
             //      
 
-            var textElements = new List<SimpleTextElement>();
+            var visualCollection = new VisualTextCollection();
             var characterOffset = 0;
+            var spanOffset = 0;
             var lastLineCharacterOffset = 0;
             var textLineIndex = 0;
             var textParagraphIndex = 0;
@@ -139,7 +141,7 @@ namespace SimpleTextEditor.Text
             // 1) EOL text elements are added for each EOL character ('\r')
             // 2) EOP text elements are added ONLY for paragraph breaks, (AND) (ONE EXTRA ITERATION) (see SimpleTextRunProvider.cs)
             //
-            while (characterOffset <= _textSource.GetLength())
+            while (spanOffset <= _textSource.GetLength())
             {
                 // Pretty sure this will be for text wrapping! (see the TextSource for how EOL works)
                 TextLineBreak? lastLineBreak = null;
@@ -154,59 +156,92 @@ namespace SimpleTextEditor.Text
                                                     lastLineBreak/*,                              // Last Line Break
                                                     _textRunCache*/);                             // TextRunCache (MSFT) stores output of formatter
 
-                // Get the number of line breaks
-                var textEOL = textElement.GetTextRunSpans().Count(x => x.Value is TextEndOfLine);
-                var textEOP = textElement.GetTextRunSpans().Count(x => x.Value is TextEndOfParagraph);
-
                 // Text Visual Y-Position
-                textVisualHeight = textLineIndex * textElement.TextHeight;
+                textVisualHeight = (textLineIndex) * textElement.TextHeight;
 
                 // Text Bounds
                 var textVisualBounds = new Rect(0, textVisualHeight, textElement.WidthIncludingTrailingWhitespace, textElement.TextHeight);
 
                 // Update Desired Size
-                desiredHeight += textElement.TextHeight;
+                desiredHeight = textVisualHeight;
                 desiredWidth = Math.Max(desiredWidth, textElement.WidthIncludingTrailingWhitespace);
 
                 if (lastLineBreak != null)
                     throw new Exception("Unhandled Line break detected!");
 
-                // EOL / Line Breaks
-                var endAppend = textEOP > 0 ? AppendPosition.Append : AppendPosition.None;
+                foreach (var span in textElement.GetTextRunSpans())
+                {
+                    if (span.Value is TextEndOfLine)
+                    {
+                        visualCollection.AddSpan(new TextEndOfLineElement(spanOffset));
 
-                // Text Position (AppendPosition is only used for the caret)
-                var startPosition = new TextPosition(characterOffset,                                   // Offsets
-                                                     textLineIndex,
-                                                     lastLineCharacterOffset,
-                                                     characterOffset - lastLineCharacterOffset + 1,     // Numbers
-                                                     textLineIndex + 1,
-                                                     textParagraphIndex + 1,
-                                                     textElements.Count,                                // Element Index
-                                                     AppendPosition.None);                              // Append Position
+                        // NON-TEXT SPANS ONLY!
+                        spanOffset += span.Length;
 
-                // This should be the append position (NEED TO FIX EOL / EOP ISSUE!)
-                var endPosition = TextPosition.FromLine(startPosition, characterOffset + textElement.Length - 1, characterOffset - lastLineCharacterOffset + 1)
-                                              .AsAppend(endAppend, false);
+                        // LINE INCREMENTERS
+                        lastLineCharacterOffset += characterOffset;
+                        textLineIndex++;
+                    }
+                    else if (span.Value is TextEndOfParagraph)
+                    {
+                        visualCollection.AddSpan(new TextEndOfParagraphElement(spanOffset));
 
-                // Next Element
-                //if (textEOP <= 0)
-                textElements.Add(new SimpleTextElement(textElement, textVisualBounds, startPosition, endPosition));
+                        // NON-TEXT SPANS ONLY!
+                        spanOffset += span.Length;
 
-                // NOT ADDING THE FINAL PARAGRAPH TEXT ELEMENT
-                //else
-                //textElements.Add(new SimpleTextElement(textElement, textVisualBounds, startPosition, startPosition));
+                        // PARAGRAPH INCREMENTERS
+                        textParagraphIndex++;
+                    }
+                    else if (span.Value is TextCharacters)
+                    {
+                        // Text Position 
+                        var position = new TextPosition(characterOffset,                                        // Offsets
+                                                        characterOffset - lastLineCharacterOffset + 1,          // Numbers
+                                                        textLineIndex + 1,
+                                                        textParagraphIndex + 1);
 
-                // Increment Indices
-                characterOffset += textElement.Length;
-                textLineIndex += textEOL;
-                textParagraphIndex += textEOP;
+                        // Character Boundaries:  These were easier to do as we build them, rather than during user interaction.
+                        //                        THESE MUST BE ONLY THE GLYPHS THAT RELATE TO THE ACTUAL TEXT SOURCE!
+                        //
+                        var characterBounds = textElement.GetIndexedGlyphRuns()
+                                                         .SelectMany(x => x.GlyphRun.AdvanceWidths)
+                                                         .Skip(lastLineCharacterOffset)
+                                                         .Take(characterOffset + span.Length - 1)
+                                                         .Aggregate(new List<Rect>(), (list, nextWidth) =>
+                                                         {
+                                                             // Previous Offset-X
+                                                             var currentWidth = list.Sum(x => x.Width);
 
-                if (textEOL > 0)
-                    lastLineCharacterOffset += characterOffset;
+                                                             // Current Character Bounds
+                                                             list.Add(new Rect(currentWidth, textVisualHeight, nextWidth, textElement.TextHeight));
+
+                                                             // Re-iterate
+                                                             return list;
+                                                         })
+                                                         .ToArray();
+
+                        // Text Element:  The TextLine has a Draw() method for WPF. It may be that we end
+                        //                up taking the glyphs apart and storing them to recall in the 
+                        //                OnRender instead.
+                        //
+                        var element = new TextElement(characterBounds, textVisualBounds, position, spanOffset);
+
+                        visualCollection.AddElement(element);
+                        visualCollection.AddLine(textElement, lastLineCharacterOffset, lastLineCharacterOffset + span.Length - 1, textLineIndex + 1);
+                        visualCollection.AddSpan(element);
+
+                        // CHARACTERS (ARE) SPANS! (Spans can include EOP / EOL, but these do not index the ITextSource)
+                        lastLineCharacterOffset += span.Length;
+                        characterOffset += span.Length;
+                        spanOffset += span.Length;
+                    }
+                    else
+                        throw new Exception("Unhandled TextRun Type:  SimpleTextFormatter");
+                }
             }
 
 
-            _lastOutputData = new VisualOutputData(textElements,
+            _lastOutputData = new VisualOutputData(visualCollection,
                                                    _visualInputData.ConstraintSize,
                                                    new Size(desiredWidth, desiredHeight),
                                                    _textSource.GetLength());

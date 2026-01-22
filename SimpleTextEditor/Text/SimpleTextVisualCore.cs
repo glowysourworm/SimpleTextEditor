@@ -5,8 +5,8 @@ using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
-using SimpleTextEditor.Text.Visualization.Interface;
 using SimpleTextEditor.Text.Visualization.Properties;
+using SimpleTextEditor.Text.Visualization.Properties.Interface;
 
 namespace SimpleTextEditor.Text
 {
@@ -63,8 +63,15 @@ namespace SimpleTextEditor.Text
             // Invalidate Cache -> Invalid
             Invalidate(insertIndex, text.Length, -1);
 
-            return _formatter.GetOutput()
-                             .CharacterOffsetToTextPosition(_textSource.GetLength(), AppendPosition.Append);
+            var result = _formatter.GetOutput()
+                                   .VisualCollection
+                                   ?.GetLastElement()
+                                   ?.Position;
+
+            if (result == null)
+                throw new Exception("Mishandled text offset:  SimpleTextVisualCore.InsertText");
+
+            return result;
         }
         public ITextPosition InsertText(int offset, string text)
         {
@@ -77,10 +84,19 @@ namespace SimpleTextEditor.Text
             // Invalidate Cache -> Invalid
             Invalidate(offset, text.Length, -1);
 
-            return _formatter.GetOutput()
-                             .CharacterOffsetToTextPosition(offset + text.Length, AppendPosition.None);
+            var result = _formatter.GetOutput()
+                                   .VisualCollection
+                                   .SearchLines(offset + text.Length)
+                                   .First()
+                                   .Position
+                                   .WithOffset(offset + text.Length);
+
+            if (result == null)
+                throw new Exception("Mishandled text offset:  SimpleTextVisualCore.InsertText");
+
+            return result;
         }
-        public ITextPosition RemoveText(int offset, int count)
+        public ITextPosition? RemoveText(int offset, int count)
         {
             if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
@@ -91,13 +107,14 @@ namespace SimpleTextEditor.Text
             // Update TextRun Cache
             Invalidate(offset, -1, offset);
 
-            // Update the caret as either:  Append, or not at the end of the line
-            var appendPosition = offset == _textSource.GetLength() ? AppendPosition.Append : AppendPosition.None;
-
             return _formatter.GetOutput()
-                             .CharacterOffsetToTextPosition(offset, appendPosition);
+                             .VisualCollection
+                             .SearchLines(offset)
+                             .First()
+                             .Position
+                             .WithOffset(offset);
         }
-        public ITextPosition ClearText()
+        public ITextPosition? ClearText()
         {
             if (!_formatter.IsInitialized)
                 throw new Exception("SimpleTextVisualCore not yet initialized");
@@ -105,7 +122,9 @@ namespace SimpleTextEditor.Text
             _textSource.ClearText();
 
             return _formatter.GetOutput()
-                             .CharacterOffsetToTextPosition(0, AppendPosition.Append);
+                             .VisualCollection
+                             .GetLastElement()
+                             ?.Position;
         }
         public VisualOutputData GetOutput()
         {

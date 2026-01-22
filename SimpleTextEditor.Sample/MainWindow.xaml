@@ -10,6 +10,7 @@
                          Padding="0"
                          Background="#0F0000FF"
                          Foreground="Black"
+                         CaretBrush="Red"
                          TextHighlightBackground="DodgerBlue"
                          TextHighlightForeground="White"
                          HorizontalAlignment="Stretch"

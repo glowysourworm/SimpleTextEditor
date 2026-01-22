@@ -27,9 +27,9 @@ namespace SimpleTextEditor.Component.Interface
         void ProcessInputText(string inputText);
 
         /// <summary>
-        /// Returns visible list of visual elements that may be rendered
+        /// Returns visual elements that may be rendered
         /// </summary>
-        IEnumerable<SimpleTextElement> GetVisualElements();
+        VisualTextCollection GetVisualText();
         Size Measure(Size availableSize);
         Rect GetCaretBounds();
 

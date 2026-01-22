@@ -2,8 +2,8 @@
 using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
-using SimpleTextEditor.Text.Visualization.Interface;
 using SimpleTextEditor.Text.Visualization.Properties;
+using SimpleTextEditor.Text.Visualization.Properties.Interface;
 
 namespace SimpleTextEditor.Text.Interface
 {
@@ -41,12 +41,12 @@ namespace SimpleTextEditor.Text.Interface
         /// (Mutator) Appends text from the ITextSource, Invalidates cached GlyphRuns, Updates caret position Re-runs the
         /// TextFormatter to produce new visual text elements, updates Caret special "glyph". Returns the new caret position.
         /// </summary>
-        ITextPosition RemoveText(int offset, int count);
+        ITextPosition? RemoveText(int offset, int count);
 
         /// <summary>
         /// (Mutator) Removes all text from the text source. Returns the new caret position.
         /// </summary>
-        ITextPosition ClearText();
+        ITextPosition? ClearText();
 
         /// <summary>
         /// (Mutator) Modify text properties for a given range. Maintains text property collections.

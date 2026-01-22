@@ -253,18 +253,32 @@ namespace SimpleTextEditor
             //var position = new Point(0, this.Padding.Top);
             var position = new Point(0, 0);
 
-            foreach (var visualLine in _document.GetVisualElements())
+            for (int index = 0; index < _document.GetVisualText().LineCount; index++)
             {
-                position.X = visualLine.Element.Start;
-                position.Y += visualLine.Element.TextHeight;
+                var visualLine = _document.GetVisualText().GetVisualLine(index + 1);
+                var visualElements = _document.GetVisualText().GetLineElements(index + 1);
 
-                visualLine.Element.Draw(drawingContext, position, InvertAxes.None);
+                // Get visual bounds for all elements in this line
+                var visualBounds = visualElements.Aggregate(new Rect(position, position), (rect, element) =>
+                {
+                    rect.Union(element.VisualBounds);
+                    return rect;
+                });
+
+                position.X = visualBounds.X;
+                position.Y += visualBounds.Height;
+
+                visualLine.Draw(drawingContext, position, InvertAxes.None);
             }
 
             if (caretBounds.Height > 0)
             {
                 //caretBounds.X += this.Padding.Left + 2; // KLUDGE
                 //caretBounds.Y += this.Padding.Top + 2;
+
+                // KLUDGE
+                caretBounds.X += 2;
+                caretBounds.Y += 2;
 
                 drawingContext.DrawRectangle(caret, null, caretBounds);
             }
