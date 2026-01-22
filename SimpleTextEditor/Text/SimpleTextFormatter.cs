@@ -127,6 +127,7 @@ namespace SimpleTextEditor.Text
 
             var textElements = new List<SimpleTextElement>();
             var characterOffset = 0;
+            var lastLineCharacterOffset = 0;
             var textLineIndex = 0;
             var textParagraphIndex = 0;
             var textVisualHeight = 0D;                              // Current Y-Position of the visual text
@@ -171,12 +172,19 @@ namespace SimpleTextEditor.Text
                     throw new Exception("Unhandled Line break detected!");
 
                 // EOL / Line Breaks
-                //var startEOL = (textElement.Length == 1) && (textEOL > 0);
-                //var endEOL = _textSource.GetLength() > 0 && (_textSource.Get().Get().Last() == '\r') && (textEOL > 0);
+                var endAppend = textEOP > 0 ? AppendPosition.Append : AppendPosition.None;
 
                 // Text Position (AppendPosition is only used for the caret)
-                var startPosition = new TextPosition(characterOffset, textElements.Count, AppendPosition.None, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
-                var endPosition = new TextPosition(characterOffset + textElement.Length - 1, textElements.Count, textEOP > 0 ? AppendPosition.Append : AppendPosition.None, 0, 0, textLineIndex + 1, textParagraphIndex + 1);
+                var startPosition = new TextPosition(characterOffset,                                   // Offsets
+                                                     textLineIndex,
+                                                     lastLineCharacterOffset,
+                                                     characterOffset - lastLineCharacterOffset + 1,     // Numbers
+                                                     textLineIndex + 1,
+                                                     textParagraphIndex + 1,
+                                                     textElements.Count,                                // Element Index
+                                                     AppendPosition.None);                              // Append Position
+
+                var endPosition = TextPosition.FromLine(startPosition, characterOffset + textElement.Length - 1, characterOffset - lastLineCharacterOffset + 1);
 
                 // Next Element
                 //if (textEOP <= 0)
@@ -190,6 +198,9 @@ namespace SimpleTextEditor.Text
                 characterOffset += textElement.Length;
                 textLineIndex += textEOL;
                 textParagraphIndex += textEOP;
+
+                if (textEOL > 0)
+                    lastLineCharacterOffset += characterOffset;
             }
 
 

@@ -8,7 +8,7 @@
                          FontFamily="Consolas"
                          FontSize="14"
                          Padding="0"
-                         Background="White"
+                         Background="#0F0000FF"
                          Foreground="Black"
                          TextHighlightBackground="DodgerBlue"
                          TextHighlightForeground="White"

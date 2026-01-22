@@ -10,7 +10,8 @@ namespace SimpleTextEditor.Model
     public class TextPosition : ITextPosition
     {
         public int Offset { get; }
-        public int LineNumber { get; }
+        public int LineOffset { get; }
+        public int LineFirstOffset { get; }
         public int ParagraphNumber { get; }
         public int VisualElementIndex { get; }
         public int VisualColumnNumber { get; }
@@ -21,15 +22,23 @@ namespace SimpleTextEditor.Model
         {
 
         }
-        public TextPosition(int sourceOffset, int elementIndex, AppendPosition appendPosition, int sourceLineNumber, int visualColumn, int visualLineNumber, int paragraphNumber)
+        public TextPosition(int sourceOffset,
+                            int lineOffset,
+                            int lineFirstOffset,
+                            int visualColumnNumber,
+                            int visualLineNumber,
+                            int paragraphNumber,
+                            int elementIndex,
+                            AppendPosition appendPosition)
         {
-            this.VisualElementIndex = elementIndex;
             this.Offset = sourceOffset;
-            this.AppendPosition = appendPosition;
-            this.LineNumber = sourceLineNumber;
-            this.VisualColumnNumber = visualColumn;
+            this.LineOffset = lineOffset;
+            this.LineFirstOffset = lineFirstOffset;
+            this.VisualColumnNumber = visualColumnNumber;
             this.VisualLineNumber = visualLineNumber;
             this.ParagraphNumber = paragraphNumber;
+            this.VisualElementIndex = elementIndex;
+            this.AppendPosition = appendPosition;
         }
 
         /// <summary>
@@ -40,13 +49,14 @@ namespace SimpleTextEditor.Model
         /// <param name="characterOffset">Desired character offset</param>
         public static TextPosition FromLine(ITextPosition linePosition, int characterOffset, int visualColumnNumber)
         {
-            return new TextPosition(characterOffset,                    // Source offset
+            return new TextPosition(characterOffset,                    // Offsets
+                                    linePosition.LineOffset,
+                                    linePosition.LineFirstOffset,
+                                    visualColumnNumber,                 // Numbers
+                                    linePosition.VisualLineNumber,
+                                    linePosition.ParagraphNumber,
                                     linePosition.VisualElementIndex,    // Line's visual element index
-                                    linePosition.AppendPosition,        // Append Position
-                                    linePosition.LineNumber,            // Line number to source
-                                    visualColumnNumber,                 // Visual Column Number (must be pre-calculated)
-                                    linePosition.VisualLineNumber,      // Visual Line Number (shold follow line position)
-                                    linePosition.ParagraphNumber);      // Paragraph Number (should follow line position)
+                                    linePosition.AppendPosition);       // Append Position
         }
 
         public ITextPosition AsAppend(AppendPosition appendPosition, bool modifyOffset)
@@ -55,12 +65,13 @@ namespace SimpleTextEditor.Model
             var offset = modifyOffset ? this.Offset + offsetChange : this.Offset;
 
             return new TextPosition(offset,
-                                    this.VisualElementIndex,
-                                    appendPosition,
-                                    this.LineNumber,
+                                    this.LineOffset,
+                                    this.LineFirstOffset,
                                     this.VisualColumnNumber,
                                     this.VisualLineNumber,
-                                    this.ParagraphNumber);
+                                    this.ParagraphNumber,
+                                    this.VisualElementIndex,
+                                    appendPosition);
         }
 
         private static int CalculateAppendPositionModification(ITextPosition position, AppendPosition appendPosition)

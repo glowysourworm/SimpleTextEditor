@@ -8,14 +8,19 @@
         int Offset { get; }
 
         /// <summary>
+        /// Offset into the text source for this position's line index
+        /// </summary>
+        int LineOffset { get; }
+
+        /// <summary>
+        /// Offset into the text source for this position's line's first character
+        /// </summary>
+        int LineFirstOffset { get; }
+
+        /// <summary>
         /// Index for the element in the visual elements collection
         /// </summary>
         int VisualElementIndex { get; }
-
-        /// <summary>
-        /// Offset into the text source for this position's line number
-        /// </summary>
-        int LineNumber { get; }
 
         /// <summary>
         /// Is there a special case for this text position? Is this instance being used 
