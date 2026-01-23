@@ -169,11 +169,24 @@ namespace SimpleTextEditor.Text
                 if (lastLineBreak != null)
                     throw new Exception("Unhandled Line break detected!");
 
+                // VisualTextCollection -> BeginParagraph() -> BeginLine() -> Add Elements... -> EndLine() -> EndParagraph(...)
+                //
+                if (!visualCollection.AddingParagraph())
+                {
+                    visualCollection.BeginParagraph();
+                }
+                if (!visualCollection.AddingLine(textParagraphIndex + 1))
+                {
+                    visualCollection.BeginLine();
+                }
+
                 foreach (var span in textElement.GetTextRunSpans())
                 {
+                    // EOP
+                    //
                     if (span.Value is TextEndOfLine)
                     {
-                        visualCollection.AddSpan(new TextEndOfLineElement(spanOffset));
+                        visualCollection.Add(span, new TextEndOfLineElement(spanOffset));
 
                         // NON-TEXT SPANS ONLY!
                         spanOffset += span.Length;
@@ -181,18 +194,31 @@ namespace SimpleTextEditor.Text
                         // LINE INCREMENTERS
                         lastLineCharacterOffset += characterOffset;
                         textLineIndex++;
-                    }
-                    else if (span.Value is TextEndOfParagraph)
-                    {
-                        visualCollection.AddSpan(new TextEndOfParagraphElement(spanOffset));
 
+                        // VisualCollection -> EndLine()
+                        visualCollection.EndLine();
+                    }
+
+                    // EOL
+                    //
+                    // NOTE*** EOL may also be EOP
+                    //
+                    if (span.Value is TextEndOfParagraph)
+                    {
                         // NON-TEXT SPANS ONLY!
                         spanOffset += span.Length;
 
                         // PARAGRAPH INCREMENTERS
                         textParagraphIndex++;
+
+                        // VisualCollection -> EndParagraph( EOP )
+                        visualCollection.EndParagraph(span, new TextEndOfParagraphElement(spanOffset));
                     }
-                    else if (span.Value is TextCharacters)
+
+                    // NOTE*** If there has already been an EOL / EOP, then the VisualTextCollection will
+                    //         catch the error.
+                    //
+                    if (span.Value is TextCharacters)
                     {
                         // Text Position 
                         var position = new TextPosition(characterOffset,                                        // Offsets
@@ -226,20 +252,24 @@ namespace SimpleTextEditor.Text
                         //
                         var element = new TextElement(characterBounds, textVisualBounds, position, spanOffset);
 
-                        visualCollection.AddElement(element);
-                        visualCollection.AddLine(textElement, lastLineCharacterOffset, lastLineCharacterOffset + span.Length - 1, textLineIndex + 1);
-                        visualCollection.AddSpan(element);
+                        visualCollection.Add(textElement, element);
 
                         // CHARACTERS (ARE) SPANS! (Spans can include EOP / EOL, but these do not index the ITextSource)
                         lastLineCharacterOffset += span.Length;
                         characterOffset += span.Length;
                         spanOffset += span.Length;
                     }
-                    else
+
+                    if (span.Value is not TextEndOfLine &&
+                        span.Value is not TextEndOfParagraph &&
+                        span.Value is not TextCharacters)
                         throw new Exception("Unhandled TextRun Type:  SimpleTextFormatter");
                 }
             }
 
+            if (visualCollection.AddingLine(textParagraphIndex + 1) ||
+                visualCollection.AddingParagraph())
+                throw new Exception("VisualCollection not properly closed! Check EOP / EOL issues!");
 
             _lastOutputData = new VisualOutputData(visualCollection,
                                                    _visualInputData.ConstraintSize,

@@ -103,7 +103,7 @@ namespace SimpleTextEditor.Text
                     caretPosition = _visualCore.RemoveText(_caret.Position.Offset + 1, 1);
                     break;
                 case ControlInput.LineUp:
-                    caretPosition = _visualCore.GetOutput().GetLastLineAtColumn(_caret.Position);
+                    caretPosition = _visualCore.GetOutput().GetPreviousLineAtColumn(_caret.Position);
                     break;
                 case ControlInput.LineDown:
                     caretPosition = _visualCore.GetOutput().GetNextLineAtColumn(_caret.Position);
@@ -314,7 +314,7 @@ namespace SimpleTextEditor.Text
 
             // Update Caret Position
             var caretOrigin = _visualCore.GetOutput().CharacterOffsetToVisualOffset(position.Offset, caretPosition);
-            var textHeight = _visualCore.GetOutput().GetVisualLineHeight(position.VisualLineNumber);
+            var textHeight = _visualCore.GetOutput().GetVisualLineHeight(position.ParagraphNumber, position.VisualLineNumber);
 
             _caret.Update(textPosition, new Rect(caretOrigin, new Size(2, textHeight)), caretPosition);
         }

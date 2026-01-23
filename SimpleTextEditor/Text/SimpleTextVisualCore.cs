@@ -65,8 +65,7 @@ namespace SimpleTextEditor.Text
 
             var result = _formatter.GetOutput()
                                    .VisualCollection
-                                   ?.GetLastElement()
-                                   ?.Position;
+                                   .GetAppendPosition();
 
             if (result == null)
                 throw new Exception("Mishandled text offset:  SimpleTextVisualCore.InsertText");
@@ -86,10 +85,8 @@ namespace SimpleTextEditor.Text
 
             var result = _formatter.GetOutput()
                                    .VisualCollection
-                                   .SearchLines(offset + text.Length)
-                                   .First()
-                                   .Position
-                                   .WithOffset(offset + text.Length);
+                                   .GetVisualLineForOffset(offset + text.Length)
+                                   .GetPosition(offset + text.Length);
 
             if (result == null)
                 throw new Exception("Mishandled text offset:  SimpleTextVisualCore.InsertText");
@@ -109,10 +106,8 @@ namespace SimpleTextEditor.Text
 
             return _formatter.GetOutput()
                              .VisualCollection
-                             .SearchLines(offset)
-                             .First()
-                             .Position
-                             .WithOffset(offset);
+                             .GetVisualLineForOffset(offset)
+                             .GetPosition(offset);
         }
         public ITextPosition? ClearText()
         {
@@ -123,8 +118,7 @@ namespace SimpleTextEditor.Text
 
             return _formatter.GetOutput()
                              .VisualCollection
-                             .GetLastElement()
-                             ?.Position;
+                             .GetAppendPosition();
         }
         public VisualOutputData GetOutput()
         {

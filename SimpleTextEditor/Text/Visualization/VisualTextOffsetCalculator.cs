@@ -13,69 +13,50 @@ namespace SimpleTextEditor.Text.Visualization
     /// </summary>
     public static class VisualTextOffsetCalculator
     {
-        public static ITextPosition GetStartOfLine(this VisualOutputData outputData, int visualLineNumber)
-        {
-            return outputData.VisualCollection.GetLineElements(visualLineNumber).First().Position;
-        }
-
-        public static ITextPosition GetEndOfLine(this VisualOutputData outputData, int visualLineNumber)
-        {
-            var lineLength = outputData.VisualCollection.GetLineElements(visualLineNumber).Sum(x => x.Length);
-            var result = outputData.VisualCollection.GetLineElements(visualLineNumber).Last().Position;
-
-            return new TextPosition(result.Offset + lineLength - 1, lineLength, visualLineNumber, result.ParagraphNumber);
-        }
-
-        public static ITextPosition GetLineOffset(this VisualOutputData outputData, int visualLineNumber, int offset)
-        {
-            var result = outputData.VisualCollection.GetLineElements(visualLineNumber).First().Position;
-
-            return new TextPosition(offset, offset + 1, visualLineNumber, result.ParagraphNumber);
-        }
-
         /// <summary>
         /// Returns the line height for a given visual line (this is MSFT's TextHeight, line height usually refers
         /// to a multiplier to the text height, so it's usually set to 1.0D.
         /// </summary>
-        public static double GetVisualLineHeight(this VisualOutputData outputData, int visualLineNumber)
+        public static double GetVisualLineHeight(this VisualOutputData outputData, int visualParagraphNumber, int visualLineNumber)
         {
-            if (outputData.VisualCollection.LineCount == 0)
+            if (outputData.VisualCollection.GetLineCount(visualParagraphNumber) == 0)
             {
-                return outputData.VisualCollection.GetSpan(0).Count;
+                throw new Exception("Cannot calculate line height before there is visual output data");
             }
 
-            var visualElement = outputData.VisualCollection.GetVisualLine(visualLineNumber);
+            var visualElement = outputData.VisualCollection.GetVisualLine(visualParagraphNumber, visualLineNumber);
 
             if (visualElement == null)
                 throw new Exception("Invalid visual line number");
 
-            return visualElement.TextHeight;
+            return visualElement.Elements.First().VisualBounds.Height;
         }
 
         /// <summary>
         /// Returns ITextPosition for the previous line. Adds the appropriate append position for the caret.
         /// </summary>
-        public static ITextPosition GetLastLineAtColumn(this VisualOutputData outputData, ITextPosition position)
+        public static ITextPosition GetPreviousLineAtColumn(this VisualOutputData outputData, ITextPosition position)
         {
-            if (outputData.VisualCollection.LineCount == 0)
+            if (outputData.VisualCollection.GetLineCount(position.ParagraphNumber) == 0)
                 return TextPosition.CreateEmpty();
 
-            if (outputData.VisualCollection.LineCount == 1)
-                return outputData.GetStartOfLine(position.VisualLineNumber);
+            if (outputData.VisualCollection.GetLineCount(position.ParagraphNumber) == 1)
+                return outputData.VisualCollection.GetVisualLine(position.ParagraphNumber, position.VisualLineNumber).GetStartPosition();
+
+            if (position.VisualLineNumber == 1)
+                return outputData.VisualCollection.GetVisualLineForOffset(position.Offset).GetStartPosition();
 
             // Get previous line
-            var lastLine = outputData.VisualCollection.GetLineElements(position.VisualLineNumber - 1).Last();
+            var currentLine = outputData.VisualCollection.GetVisualLine(position.ParagraphNumber, position.VisualLineNumber);
+            var lastLine = outputData.VisualCollection.GetVisualLine(position.ParagraphNumber, position.VisualLineNumber - 1);
 
             // EOL
-            if (lastLine.Position.Offset < position.Offset)
-                return outputData.GetEndOfLine(lastLine.Position.VisualLineNumber);
+            if (lastLine.GetEndPosition().Offset < position.Offset)
+                return lastLine.GetEndPosition();
 
             // EOL / Normal
             else
-                return new TextPosition(lastLine.Position.Offset + position.VisualColumnNumber - 1,
-                                        position.VisualColumnNumber,
-                                        lastLine.Position.VisualLineNumber,
-                                        lastLine.Position.ParagraphNumber);
+                return lastLine.GetPosition(lastLine.GetStartPosition().Offset + (position.Offset - currentLine.StartOffset));
         }
 
         /// <summary>
@@ -83,25 +64,26 @@ namespace SimpleTextEditor.Text.Visualization
         /// </summary>
         public static ITextPosition GetNextLineAtColumn(this VisualOutputData outputData, ITextPosition position)
         {
-            if (outputData.VisualCollection.LineCount == 0)
+            if (outputData.VisualCollection.GetLineCount(position.ParagraphNumber) == 0)
                 return TextPosition.CreateEmpty();
 
-            if (outputData.VisualCollection.LineCount == 1)
-                return outputData.GetEndOfLine(position.VisualLineNumber);
+            if (outputData.VisualCollection.GetLineCount(position.ParagraphNumber) == 1)
+                return outputData.VisualCollection.GetVisualLine(position.ParagraphNumber, position.VisualLineNumber).GetStartPosition();
+
+            if (outputData.VisualCollection.GetLineCount(position.ParagraphNumber) == position.VisualLineNumber)
+                return outputData.VisualCollection.GetVisualLineForOffset(position.Offset).GetEndPosition();
 
             // Get previous line
-            var nextLine = outputData.VisualCollection.GetLineElements(position.VisualLineNumber + 1).Last();
+            var currentLine = outputData.VisualCollection.GetVisualLine(position.ParagraphNumber, position.VisualLineNumber);
+            var nextLine = outputData.VisualCollection.GetVisualLine(position.ParagraphNumber, position.VisualLineNumber + 1);
 
             // EOL
-            if (nextLine.Position.Offset < position.Offset)
-                return outputData.GetEndOfLine(nextLine.Position.VisualLineNumber);
+            if (nextLine.GetEndPosition().Offset < position.Offset)
+                return nextLine.GetEndPosition();
 
             // EOL / Normal
             else
-                return new TextPosition(nextLine.Position.Offset + position.VisualColumnNumber - 1,
-                                        position.VisualColumnNumber,
-                                        nextLine.Position.VisualLineNumber,
-                                        nextLine.Position.ParagraphNumber);
+                return nextLine.GetPosition(nextLine.GetStartPosition().Offset + (position.Offset - currentLine.StartOffset));
         }
 
         /// <summary>
@@ -111,7 +93,7 @@ namespace SimpleTextEditor.Text.Visualization
         /// </summary>
         public static ITextPosition VisualPointToTextPosition(this VisualOutputData outputData, Point point, out CaretPosition caretPosition)
         {
-            if (outputData.VisualCollection.LineCount == 0)
+            if (outputData.VisualCollection.GetParagraphCount() == 0)
                 throw new Exception("SimpleTextEditorFormatter Measure must be called to initilaize output data first");
 
             caretPosition = CaretPosition.BeforeCharacter;
@@ -120,12 +102,12 @@ namespace SimpleTextEditor.Text.Visualization
             var lastRectangle = new Rect(outputData.ConstraintSize);
 
             if (point.Y <= lastRectangle.Top || point.X <= lastRectangle.Left)
-                return outputData.GetStartOfLine(1);
+                return outputData.VisualCollection.GetFirstVisualLine().GetStartPosition();
 
             else if (point.Y >= lastRectangle.Bottom || point.X >= lastRectangle.Right)
             {
                 caretPosition = CaretPosition.AfterCharacter;
-                return outputData.GetEndOfLine(1);
+                return outputData.VisualCollection.GetLastVisualLine().GetEndPosition();
             }
 
 
@@ -133,30 +115,30 @@ namespace SimpleTextEditor.Text.Visualization
             else
             {
                 // Containing Text Element
-                var textElements = outputData.VisualCollection
-                                            .SearchLines(x => x.VisualBounds.Top <= point.Y && x.VisualBounds.Bottom >= point.Y);
+                var visualLine = outputData.VisualCollection
+                                           .FirstLineWhereAnyElement(x => x.VisualBounds.Top <= point.Y && x.VisualBounds.Bottom >= point.Y);
 
                 // None -> Take closest line of text
-                if (!textElements.Any())
+                if (visualLine == null)
                 {
                     caretPosition = CaretPosition.AfterCharacter;
-                    return outputData.GetEndOfLine(1);
+                    return outputData.VisualCollection.GetFirstVisualLine().GetEndPosition();
                 }
 
 
                 // Use TextBounds property of TextLine to calculate position
                 // 
-                var index = textElements.SelectMany(x => x.CharacterBounds).IndexOf(x => x.Contains(point));
+                var index = visualLine.Elements.SelectMany(x => x.CharacterBounds).IndexOf(x => x.Contains(point));
 
                 if (index >= 0)
                 {
                     caretPosition = CaretPosition.BeforeCharacter;
-                    return outputData.GetLineOffset(textElements.First().Position.VisualLineNumber, index);
+                    return visualLine.GetPosition(visualLine.StartOffset + index);
                 }
 
                 // Default:  Paragraph Append Position
                 caretPosition = CaretPosition.AfterCharacter;
-                return outputData.GetEndOfLine(textElements.First().Position.VisualLineNumber);
+                return visualLine.GetEndPosition();
             }
         }
 
@@ -166,7 +148,7 @@ namespace SimpleTextEditor.Text.Visualization
         /// </summary>
         public static Point CharacterOffsetToVisualOffset(this VisualOutputData outputData, int characterOffset, CaretPosition caretPosition)
         {
-            if (outputData.VisualCollection.LineCount == 0)
+            if (outputData.VisualCollection.GetParagraphCount() == 0)
             {
                 if (characterOffset > 0)
                     throw new ArgumentException("For empty text sources please use ITextPosition.IsEmpty pattern");
@@ -175,7 +157,10 @@ namespace SimpleTextEditor.Text.Visualization
             }
 
             // Character -> ITextPosition
-            var lineElements = outputData.VisualCollection.SearchLines(characterOffset);
+            var visualLine = outputData.VisualCollection.GetVisualLineForOffset(characterOffset);
+
+            if (visualLine == null)
+                throw new Exception("No line elements found for offset " + characterOffset);
 
             // Get ITextElement from collection
             var positionX = 0D;
@@ -183,14 +168,14 @@ namespace SimpleTextEditor.Text.Visualization
 
             // Prepend
             var stopIndex = caretPosition == CaretPosition.BeforeCharacter ?
-                            characterOffset - lineElements.First().Position.Offset :
-                            characterOffset - lineElements.First().Position.Offset + 1;
+                            characterOffset - visualLine.StartOffset :
+                            characterOffset - visualLine.StartOffset + 1;
 
-            foreach (var visualElement in lineElements)
+            foreach (var visualElement in visualLine.Elements)
             {
                 for (int index = 0; index < visualElement.CharacterBounds.Length; index++)
                 {
-                    var offsetIndex = index + lineElements.First().Position.Offset;
+                    var offsetIndex = index + visualLine.StartOffset;
 
                     if (offsetIndex < stopIndex)
                     {

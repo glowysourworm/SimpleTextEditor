@@ -253,22 +253,29 @@ namespace SimpleTextEditor
             //var position = new Point(0, this.Padding.Top);
             var position = new Point(0, 0);
 
-            for (int index = 0; index < _document.GetVisualText().LineCount; index++)
+            // Paragraphs
+            for (int paragraphIndex = 0; paragraphIndex < _document.GetVisualText().GetParagraphCount(); paragraphIndex++)
             {
-                var visualLine = _document.GetVisualText().GetVisualLine(index + 1);
-                var visualElements = _document.GetVisualText().GetLineElements(index + 1);
-
-                // Get visual bounds for all elements in this line
-                var visualBounds = visualElements.Aggregate(new Rect(position, position), (rect, element) =>
+                // Paragraph -> Lines
+                for (int lineIndex = 0; lineIndex < _document.GetVisualText().GetLineCount(paragraphIndex + 1); lineIndex++)
                 {
-                    rect.Union(element.VisualBounds);
-                    return rect;
-                });
+                    var visualLine = _document.GetVisualText().GetVisualLine(paragraphIndex + 1, lineIndex + 1);
 
-                position.X = visualBounds.X;
-                position.Y += visualBounds.Height;
+                    // Get visual bounds for all elements in this line
+                    var visualBounds = visualLine.Elements.Aggregate(new Rect(position, position), (rect, element) =>
+                    {
+                        rect.Union(element.VisualBounds);
+                        return rect;
+                    });
 
-                visualLine.Draw(drawingContext, position, InvertAxes.None);
+                    position.X = visualBounds.X;
+                    position.Y += visualBounds.Height;
+
+                    foreach (var visualElement in visualLine.VisualElements)
+                    {
+                        visualElement.Draw(drawingContext, position, InvertAxes.None);
+                    }
+                }
             }
 
             if (caretBounds.Height > 0)

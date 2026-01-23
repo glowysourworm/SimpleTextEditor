@@ -3,7 +3,6 @@
 using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Visualization.Element.Interface;
 
-using SimpleWpf.Extensions.Collection;
 using SimpleWpf.SimpleCollections.Collection;
 
 namespace SimpleTextEditor.Text.Visualization
@@ -14,146 +13,254 @@ namespace SimpleTextEditor.Text.Visualization
     /// </summary>
     public class VisualTextCollection
     {
-        public int LineCount { get { return _visualLines.Count; } }
+        // Visual Paragraphs
+        SimpleDictionary<int, VisualParagraphData> _visualParagraphs;
 
-        // Visual Line Data
-        SimpleDictionary<ITextPosition, ITextElement> _positionLookup;
-        SimpleDictionary<int, List<ITextElement>> _visualLineElements;
-
-        // Visual Lines
-        SimpleDictionary<int, VisualLineData> _visualLines;
-
-        // ITextSpan Lookup
-        SimpleDictionary<int, List<ITextSpan>> _textSpanLookup;
+        // BeginParagraph() -> BeginLine() ... EndLine() -> EndParagraph( {closing span} )
+        int _lineCounter;               // Counts visual lines, starting at 1
+        int _paragraphCounter;          // Counts visual paragraphs
+        bool _addingLine;
+        bool _addingParagraph;
+        VisualParagraphData? _currentParagraph;
+        VisualLineData? _currentLine;
 
         public VisualTextCollection()
         {
-            _positionLookup = new SimpleDictionary<ITextPosition, ITextElement>();
-            _visualLineElements = new SimpleDictionary<int, List<ITextElement>>();
-            _visualLines = new SimpleDictionary<int, VisualLineData>();
-            _textSpanLookup = new SimpleDictionary<int, List<ITextSpan>>();
+            _visualParagraphs = new SimpleDictionary<int, VisualParagraphData>();
+            _lineCounter = 0;
+            _paragraphCounter = 0;
+            _addingLine = false;
+            _addingParagraph = false;
+            _currentLine = null;
+            _currentParagraph = null;
         }
 
+        #region (public) Builder Methods
         public void Clear()
         {
-            _visualLineElements.Clear();
-            _visualLines.Clear();
-            _positionLookup.Clear();
-            _textSpanLookup.Clear();
+            if (_addingParagraph)
+                throw new Exception("Working on visual paragraph! Must call EndParagraph() before this operation!");
+
+            if (_addingLine)
+                throw new Exception("Working on visual line! Must call EndLine() before this operation!");
+
+            _visualParagraphs.Clear();
+            _lineCounter = 0;
+            _paragraphCounter = 0;
+            _currentLine = null;
+            _currentParagraph = null;
+        }
+        public void BeginParagraph()
+        {
+            if (_addingParagraph)
+                throw new Exception("Working on visual paragraph! Must call EndParagraph() before this operation!");
+
+            if (_addingLine)
+                throw new Exception("Working on visual line! Must call EndLine() before this operation!");
+
+            _addingParagraph = true;
+            _paragraphCounter++;
+            _currentParagraph = new VisualParagraphData(_paragraphCounter);
+        }
+        public void BeginLine()
+        {
+            if (!_addingParagraph)
+                throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
+
+            if (_addingLine)
+                throw new Exception("Working on visual line! Must call EndLine() before this operation!");
+
+            _addingLine = true;
+            _lineCounter++;
+            _currentLine = new VisualLineData(_lineCounter);
         }
 
         /// <summary>
-        /// Adds span to span's offset position. May set multiple spans to same offset - which
-        /// follows MSFT's EOL / EOP case. They have zero length.
+        /// DO NOT USE FOR ADDING PARAGRAPH EOP ELEMENTS!
         /// </summary>
-        /// <param name="span"></param>
-        public void AddSpan(ITextSpan span)
+        public void Add(TextLine visualElement, ITextElement element)
         {
-            if (!_textSpanLookup.ContainsKey(span.SpanPosition))
-                _textSpanLookup.Add(span.SpanPosition, new List<ITextSpan>() { span });
+            if (!_addingParagraph)
+                throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
 
-            else
-                _textSpanLookup[span.SpanPosition].Add(span);
+            if (!_addingLine)
+                throw new Exception("Not working on visual line! Must call BeginLine() before this operation!");
+
+            _currentLine.AddElement(visualElement, element);
         }
 
         /// <summary>
-        /// Also adds to span lookup!
+        /// DO NOT USE FOR ADDING PARAGRAPH EOP ELEMENTS!
         /// </summary>
-        public void AddElement(ITextElement element)
+        public void Add(TextSpan<TextRun> visualSpan, ITextSpan span)
         {
-            if (!_visualLineElements.ContainsKey(element.Position.VisualLineNumber))
-                _visualLineElements.Add(element.Position.VisualLineNumber, new List<ITextElement>() { element });
+            if (!_addingParagraph)
+                throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
 
-            else
-                _visualLineElements[element.Position.VisualLineNumber].Add(element);
+            if (!_addingLine)
+                throw new Exception("Not working on visual line! Must call BeginLine() before this operation!");
 
-            _positionLookup.Add(element.Position, element);
-
-
-            AddSpan(element);
+            _currentLine.AddSpan(span);
         }
 
-        public void AddLine(TextLine line, int startOffset, int endOffset, int lineNumber)
+        public void EndLine()
         {
-            if (!_visualLines.ContainsKey(lineNumber))
-                _visualLines.Add(lineNumber, new TextLineData(startOffset, endOffset, lineNumber));
+            if (!_addingParagraph)
+                throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
 
-            _visualLines[lineNumber].Elements.Add(line);
+            if (!_addingLine)
+                throw new Exception("Not working on visual line! Must call BeginLine() before this operation!");
+
+            if (!_visualParagraphs.ContainsKey(_paragraphCounter))
+                _visualParagraphs.Add(_paragraphCounter, _currentParagraph);
+
+            _visualParagraphs[_paragraphCounter].AddLine(_currentLine);
+
+            _addingLine = false;
+            _currentLine = null;
         }
-
-        public IList<ITextSpan> GetSpan(int spanPosition)
+        public void EndParagraph(TextSpan<TextRun> closingSpan, ITextSpan span)
         {
-            return _textSpanLookup[spanPosition];
+            if (!_addingParagraph)
+                throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
+
+            if (_addingLine)
+                throw new Exception("Working on visual line! Must call EndLine() before this operation!");
+
+            _visualParagraphs[_paragraphCounter].SetClosingSpan(span);
+
+            _addingParagraph = false;
+            _currentParagraph = null;
         }
+        #endregion
 
-        public ITextElement GetElement(ITextPosition position)
+        #region (public) Safe Access Methods
+        public int GetLineCount(int paragraphNumber)
         {
-            return _positionLookup[position];
+            return _visualParagraphs[paragraphNumber].Lines.Count();
         }
-
-        public IList<ITextElement> GetLineElements(int visualLineNumber)
+        public int GetParagraphCount()
         {
-            return _visualLineElements[visualLineNumber];
+            return _paragraphCounter;
         }
-
-        public IList<TextLine> GetVisualLine(int visualLineNumber)
+        public bool AddingLine(int paragraphNumber)
         {
-            return _visualLines[visualLineNumber].Elements;
+            return _addingLine;
         }
-
-        public IEnumerable<ITextElement> GetVisualElements()
+        public bool AddingParagraph()
         {
-            return _positionLookup.Values;
+            return _addingParagraph;
         }
+        #endregion
 
-        public IEnumerable<TextLineData> GetVisualLines()
+        #region (public) User Methods
+        public VisualLineData GetFirstVisualLine()
         {
-            return _visualLines.SelectMany(x => x.Value.Elements).Actualize();
+            ValidateForUsing();
+
+            return _visualParagraphs.First().Value.Lines.First();
         }
-
-        /// <summary>
-        /// Returns first line that contains the provided offset
-        /// </summary>
-        /// <param name="anyOffset">May be any offset in the ITextSource range</param>
-        public IEnumerable<ITextElement> SearchLines(int anyOffset)
+        public VisualLineData GetLastVisualLine()
         {
-            foreach (var pair in _visualLineElements)
+            ValidateForUsing();
+
+            return _visualParagraphs.Last().Value.Lines.Last();
+        }
+        public VisualLineData GetVisualLine(int visualParagraphNumber, int visualLineNumber)
+        {
+            ValidateForUsing();
+
+            return _visualParagraphs[visualParagraphNumber].GetLine(visualLineNumber);
+        }
+        public VisualLineData GetVisualLineForOffset(int anyOffset)
+        {
+            ValidateForUsing();
+
+            foreach (var paragraph in _visualParagraphs.Values)
             {
-                var textLine = _visualLines.FirstOrDefault(x => x.Value.StartOffset <= anyOffset && x.Value.EndOffset >= anyOffset);
-
-                if (textLine.Value == null)
-                    continue;
-
-                var element = pair.Value.FirstOrDefault(x => pair.Key == textLine.Key);
-
-                if (element != null)
-                    return pair.Value;
+                foreach (var line in paragraph.Lines)
+                {
+                    if (line.ContainsOffset(anyOffset))
+                        return line;
+                }
             }
 
-            return Enumerable.Empty<ITextElement>();
+            throw new Exception("Unable to locate visual line for offset " + anyOffset);
         }
-
-        public IEnumerable<ITextElement> SearchLines(Func<ITextElement, bool> predicate)
+        public VisualLineData? FirstLineWhere(Func<VisualLineData, bool> predicate)
         {
-            foreach (var list in _visualLineElements.Values)
-            {
-                var element = list.FirstOrDefault(x => predicate(x));
+            ValidateForUsing();
 
-                if (element != null)
-                    return list;
+            foreach (var paragraph in _visualParagraphs.Values)
+            {
+                foreach (var line in paragraph.Lines)
+                {
+                    if (predicate(line))
+                        return line;
+                }
             }
 
-            return Enumerable.Empty<ITextElement>();
+            return null;
         }
-
-        public ITextElement? GetLastElement()
+        public VisualLineData? FirstLineWhereAnyElement(Func<ITextElement, bool> predicate)
         {
-            return _visualLineElements.Values.LastOrDefault()?.LastOrDefault();
-        }
+            ValidateForUsing();
 
-        public ITextElement? GetFirstElement()
-        {
-            return _visualLineElements.Values.FirstOrDefault()?.FirstOrDefault();
+            foreach (var paragraph in _visualParagraphs.Values)
+            {
+                foreach (var line in paragraph.Lines)
+                {
+                    foreach (var element in line.Elements)
+                    {
+                        if (predicate(element))
+                            return line;
+                    }
+                }
+            }
+
+            return null;
         }
+        public ITextPosition? GetAppendPosition()
+        {
+            ValidateForUsing();
+
+            var lastParagraph = _visualParagraphs.LastOrDefault();
+
+            if (lastParagraph.Value == null)
+                return null;
+
+            return lastParagraph.Value
+                                .Lines
+                                .LastOrDefault()?
+                                .Elements?
+                                .LastOrDefault()?
+                                .Position;
+        }
+        public ITextPosition? GetAppendPosition(int paragraphNumber)
+        {
+            ValidateForUsing();
+
+            return _visualParagraphs[paragraphNumber]
+                                .Lines
+                                .LastOrDefault()?
+                                .Elements?
+                                .LastOrDefault()?
+                                .Position;
+        }
+        #endregion
+
+        #region (private) Methods
+
+        // Makes sure that the user has properly closed lines and paragraphs before calling other
+        // methods. 
+        private void ValidateForUsing()
+        {
+            if (_addingParagraph)
+                throw new Exception("Working on visual paragraph! Must call EndParagraph() before this operation!");
+
+            if (_addingLine)
+                throw new Exception("Working on visual line! Must call EndLine() before this operation!");
+        }
+        #endregion
     }
 }
