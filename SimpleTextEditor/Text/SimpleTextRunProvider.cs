@@ -92,7 +92,7 @@ namespace SimpleTextEditor.Text
                 }
                 else if (nextEOLIndex >= 0)
                 {
-                    renderLength = nextEOLIndex - characterIndex - 1;
+                    renderLength = nextEOLIndex - characterIndex;
                 }
                 else if (currentPropertyLength > 0)
                 {

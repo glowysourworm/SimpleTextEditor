@@ -141,6 +141,9 @@ namespace SimpleTextEditor.Text.Visualization
             if (_addingLine)
                 throw new Exception("Working on visual line! Must call EndLine() before this operation!");
 
+            if (!_visualParagraphs.ContainsKey(_paragraphCounter))
+                _visualParagraphs.Add(_paragraphCounter, _currentParagraph);
+
             _visualParagraphs[_paragraphCounter].SetClosingSpan(span);
 
             _addingParagraph = false;

@@ -51,7 +51,7 @@ namespace SimpleTextEditor.Text.Source
 
         public char[] GetString(int index, int count)
         {
-            throw new NotImplementedException();
+            return _source.GetSubString(index, count).ToArray();
         }
         public int GetLength()
         {

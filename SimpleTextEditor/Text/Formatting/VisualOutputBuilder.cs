@@ -18,6 +18,7 @@ namespace SimpleTextEditor.Text.Formatting
         public VisualTextCollection VisualText { get; set; }
         public Size DesiredSize { get { return _desiredSize; } }
         public Point VisualOffset { get { return _visualOffset; } }
+        public int BackendOffset { get; set; }
         public int Offset { get; set; }
         public int LineOffset { get; set; }
         public int LineIndex { get; set; }
@@ -36,6 +37,7 @@ namespace SimpleTextEditor.Text.Formatting
             _constraintSize = constraintSize;
             _desiredSize = new Size();
             _visualOffset = new Point();
+            this.BackendOffset = 0;
             this.Offset = 0;
             this.LineOffset = 0;
             this.LineIndex = 0;
