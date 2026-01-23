@@ -3,6 +3,8 @@
 using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Visualization.Element.Interface;
 
+using SimpleWpf.Extensions;
+
 namespace SimpleTextEditor.Text.Visualization
 {
     /// <summary>
@@ -42,11 +44,12 @@ namespace SimpleTextEditor.Text.Visualization
             if (_startOffset == -1)
             {
                 _startOffset = textElement.Position.Offset;
-                _endOffset = _startOffset;
+                _endOffset = textElement.Position.Offset + textElement.Length - 1;
             }
 
-            // End Offset (Update)
-            _endOffset += textElement.Length - 1;
+            // End Offset (Update) (careful with multiple segments!)
+            else
+                _endOffset += textElement.Length;
 
             _visualElements.Add(element);
             _elements.Add(textElement);
@@ -121,6 +124,11 @@ namespace SimpleTextEditor.Text.Visualization
 
             //if (this.Length >= _elements.Max(x => x.SpanPosition))
             //    throw new ArgumentException("Invalid length of text element! Check text formatting!");
+        }
+
+        public override string ToString()
+        {
+            return this.FormatToString();
         }
     }
 }

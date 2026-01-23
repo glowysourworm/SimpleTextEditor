@@ -1,5 +1,7 @@
 ﻿using SimpleTextEditor.Text.Visualization.Element.Interface;
 
+using SimpleWpf.Extensions;
+
 namespace SimpleTextEditor.Text.Visualization
 {
     public class VisualParagraphData
@@ -52,6 +54,11 @@ namespace SimpleTextEditor.Text.Visualization
         {
             _lines.Clear();
             _closingSpan = null;
+        }
+
+        public override string ToString()
+        {
+            return this.FormatToString();
         }
     }
 }

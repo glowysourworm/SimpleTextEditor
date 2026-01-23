@@ -83,10 +83,18 @@ namespace SimpleTextEditor.Text
             // Invalidate Cache -> Invalid
             Invalidate(offset, text.Length, -1);
 
+            //// Check to see if we're appending
+            //var appendPosition = _formatter.GetOutput()
+            //                               .VisualCollection
+            //                               .GetAppendPosition();
+
+            //if (appendPosition == null)
+            //    throw new Exception("Cannot insert text to an empty ITextSource! Please use AppendText");
+
             var result = _formatter.GetOutput()
                                    .VisualCollection
-                                   .GetVisualLineForOffset(offset + text.Length)
-                                   .GetPosition(offset + text.Length);
+                                   .GetVisualLineForOffset(offset)
+                                   .GetPosition(offset);
 
             if (result == null)
                 throw new Exception("Mishandled text offset:  SimpleTextVisualCore.InsertText");

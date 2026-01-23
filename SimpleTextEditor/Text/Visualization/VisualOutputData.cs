@@ -1,5 +1,7 @@
 ﻿using System.Windows;
 
+using SimpleWpf.Extensions;
+
 namespace SimpleTextEditor.Text.Visualization
 {
     public class VisualOutputData
@@ -42,6 +44,11 @@ namespace SimpleTextEditor.Text.Visualization
             this.DesiredSize = desiredSize;
             this.SourceLength = sourceLength;
             this.VisualCollection = visualCollection;
+        }
+
+        public override string ToString()
+        {
+            return this.FormatToString();
         }
     }
 }

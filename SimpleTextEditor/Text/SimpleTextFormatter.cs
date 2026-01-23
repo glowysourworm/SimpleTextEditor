@@ -140,7 +140,7 @@ namespace SimpleTextEditor.Text
                 // MSFT Advanced Text Formatting (Makes multiple calls to ITextRunProvider)
                 //
                 var textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
-                                                        builder.Offset,                               // Character offset to ITextSource
+                                                        builder.BackendOffset,                        // Character offset to ITextSource
                                                         _visualInputData.ConstraintSize.Width,        // UI Width
                                                         _visualInputData.DefaultParagraphProperties,  // Visual Properties (Default Properties)
                                                         lastLineBreak /*,                             // Last Line Break
@@ -222,7 +222,7 @@ namespace SimpleTextEditor.Text
                         var lineLength = builder.Offset - builder.LineOffset;
 
                         // OFFSET (this is the '\r' character)
-                        builder.Offset++;
+                        //builder.Offset++;
 
                         // LINE INCREMENTERS
                         builder.LineOffset = builder.Offset;
