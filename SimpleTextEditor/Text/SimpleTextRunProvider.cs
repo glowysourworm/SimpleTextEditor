@@ -84,7 +84,7 @@ namespace SimpleTextEditor.Text
                     // EOL happens first
                     if (nextEOLIndex >= 0 && nextEOLIndex < nextPropertyRange.StartIndex)
                     {
-                        renderLength = nextEOLIndex - characterIndex;
+                        renderLength = nextEOLIndex - characterIndex - 1;
                     }
 
                     else
@@ -92,7 +92,7 @@ namespace SimpleTextEditor.Text
                 }
                 else if (nextEOLIndex >= 0)
                 {
-                    renderLength = nextEOLIndex - characterIndex;
+                    renderLength = nextEOLIndex - characterIndex - 1;
                 }
                 else if (currentPropertyLength > 0)
                 {

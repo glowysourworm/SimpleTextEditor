@@ -4,11 +4,8 @@ namespace SimpleTextEditor.Text.Visualization.Element
 {
     public class TextEndOfLineElement : ITextSpan
     {
-        public int SpanPosition { get; }
-
-        public TextEndOfLineElement(int spanPosition)
+        public TextEndOfLineElement()
         {
-            this.SpanPosition = spanPosition;
         }
     }
 }

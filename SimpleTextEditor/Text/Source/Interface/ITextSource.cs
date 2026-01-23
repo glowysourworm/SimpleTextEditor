@@ -5,6 +5,7 @@ namespace SimpleTextEditor.Text.Source.Interface
     public interface ITextSource
     {
         char GetEOLCharacter();
+        int GetEOLCharacterCount(int startIndex, int count);
         char GetChar(int index);
         char[] GetString();
         char[] GetString(int index, int count);

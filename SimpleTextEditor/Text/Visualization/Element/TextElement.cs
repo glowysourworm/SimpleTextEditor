@@ -14,15 +14,13 @@ namespace SimpleTextEditor.Text.Visualization.Element
         public ITextPosition Position { get; }
         public Rect VisualBounds { get; }
         public int Length { get; }
-        public int SpanPosition { get; }
 
-        public TextElement(Rect[] characterBounds, Rect visualBounds, ITextPosition position, int spanPosition)
+        public TextElement(Rect[] characterBounds, Rect visualBounds, ITextPosition position)
         {
             this.Position = position;
             this.CharacterBounds = characterBounds;
             this.VisualBounds = visualBounds;
             this.Length = characterBounds.Length;
-            this.SpanPosition = spanPosition;
         }
     }
 }

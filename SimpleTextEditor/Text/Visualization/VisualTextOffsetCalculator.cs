@@ -132,6 +132,9 @@ namespace SimpleTextEditor.Text.Visualization
 
                 if (index >= 0)
                 {
+                    if (visualLine.StartOffset + index > visualLine.EndOffset)
+                        throw new Exception("Index calculated out of range");
+
                     caretPosition = CaretPosition.BeforeCharacter;
                     return visualLine.GetPosition(visualLine.StartOffset + index);
                 }

@@ -13,6 +13,7 @@ namespace SimpleTextEditor.Text.Visualization
         public int LineNumber { get; }
         public int StartOffset { get { return _startOffset; } }
         public int EndOffset { get { return _endOffset; } }
+        public int Length { get { return _startOffset >= 0 ? _endOffset - _startOffset + 1 : 0; } }
         public IEnumerable<TextLine> VisualElements { get { return _visualElements; } }
         public IEnumerable<ITextElement> Elements { get { return _elements; } }
         public IEnumerable<ITextSpan> Spans { get { return _spans; } }
@@ -39,14 +40,19 @@ namespace SimpleTextEditor.Text.Visualization
         {
             // Start Offset
             if (_startOffset == -1)
+            {
                 _startOffset = textElement.Position.Offset;
+                _endOffset = _startOffset;
+            }
 
-            // End Offset
-            _endOffset = textElement.Position.Offset + textElement.Length - 1;
+            // End Offset (Update)
+            _endOffset += textElement.Length - 1;
 
             _visualElements.Add(element);
             _elements.Add(textElement);
             _spans.Add(textElement);            // ITextElement is also a ITextSpan (but with non-zero length)
+
+            Validate();
         }
         public void AddSpan(ITextSpan textSpan)
         {
@@ -60,6 +66,8 @@ namespace SimpleTextEditor.Text.Visualization
             // 1) Visual Element not used for spans
             // 2) Offsets only used with text elements (ITextElement)
             //
+
+            Validate();
         }
 
         /// <summary>
@@ -69,7 +77,7 @@ namespace SimpleTextEditor.Text.Visualization
         public ITextPosition GetPosition(int offset)
         {
             if (!ContainsOffset(offset))
-                return null;
+                throw new ArgumentException("Offset out of range");
 
             return _elements.First().Position.WithOffset(offset);
         }
@@ -100,6 +108,19 @@ namespace SimpleTextEditor.Text.Visualization
                 return false;
 
             return true;
+        }
+
+        private void Validate()
+        {
+            if (_elements.Count == 0)
+                return;
+
+            // Validate Length
+            if (this.Length > _elements.Sum(x => x.Length))
+                throw new ArgumentException("Invalid length of text element! Check text formatting!");
+
+            //if (this.Length >= _elements.Max(x => x.SpanPosition))
+            //    throw new ArgumentException("Invalid length of text element! Check text formatting!");
         }
     }
 }

@@ -28,6 +28,18 @@ namespace SimpleTextEditor.Text.Source
         {
             return _EOL;
         }
+        public int GetEOLCharacterCount(int startIndex, int count)
+        {
+            var eolCount = 0;
+
+            for (int index = startIndex; index < startIndex + count; index++)
+            {
+                if (_source.Get()[index] == _EOL)
+                    eolCount++;
+            }
+
+            return eolCount;
+        }
         public char GetChar(int index)
         {
             return _source.Get()[index];

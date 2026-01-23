@@ -1,4 +1,5 @@
-﻿using System.Windows.Media.TextFormatting;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Visualization.Element.Interface;
@@ -103,13 +104,26 @@ namespace SimpleTextEditor.Text.Visualization
             _currentLine.AddSpan(span);
         }
 
-        public void EndLine()
+        /// <summary>
+        /// Finalizes visual line. Use the line length validation to validate the line just created.
+        /// </summary>
+        /// <param name="lineLengthExpected">Line length from the formatter</param>
+        public void EndLine(int lineLengthExpected)
         {
             if (!_addingParagraph)
                 throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
 
             if (!_addingLine)
                 throw new Exception("Not working on visual line! Must call BeginLine() before this operation!");
+
+            if (_currentLine == null)
+                throw new Exception("Not working on visual line! Must call BeginLine() before this operation!");
+
+            if (_currentParagraph == null)
+                throw new Exception("Not working on a paragraph! Must call BeginParagraph() before this operation!");
+
+            if (_currentLine.Length != lineLengthExpected)
+                throw new ValidationException(string.Format("Line length invalid:  Expected={0} Actual={1}", lineLengthExpected, _currentLine.Length));
 
             if (!_visualParagraphs.ContainsKey(_paragraphCounter))
                 _visualParagraphs.Add(_paragraphCounter, _currentParagraph);

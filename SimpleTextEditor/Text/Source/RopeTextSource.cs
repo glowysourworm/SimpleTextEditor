@@ -82,5 +82,10 @@ namespace SimpleTextEditor.Text.Source
         {
             throw new NotImplementedException();
         }
+
+        public int GetEOLCharacterCount(int startIndex, int count)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -3,6 +3,7 @@ using System.Windows.Media;
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model;
+using SimpleTextEditor.Text.Formatting;
 using SimpleTextEditor.Text.Interface;
 using SimpleTextEditor.Text.Source.Interface;
 using SimpleTextEditor.Text.Visualization;
@@ -126,93 +127,109 @@ namespace SimpleTextEditor.Text
             // 4) Call FormatLine (2nd Pass):  This will be the output, if it was needed
             //      
 
-            var visualCollection = new VisualTextCollection();
-            var characterOffset = 0;
-            var spanOffset = 0;
-            var lastLineCharacterOffset = 0;
-            var textLineIndex = 0;
-            var textParagraphIndex = 0;
-            var textVisualHeight = 0D;                              // Current Y-Position of the visual text
-            var desiredHeight = 0D;
-            var desiredWidth = 0D;
+            var builder = new VisualOutputBuilder(_textSource, _visualInputData.ConstraintSize);
+            TextLineBreak? lastLineBreak = null;
 
             // MSFT Advance Text Formatting: This can be tracked after it's understood how to use the EOL!
             //
             // 1) EOL text elements are added for each EOL character ('\r')
             // 2) EOP text elements are added ONLY for paragraph breaks, (AND) (ONE EXTRA ITERATION) (see SimpleTextRunProvider.cs)
             //
-            while (spanOffset <= _textSource.GetLength())
+            while (builder.Offset < _textSource.GetLength())
             {
-                // Pretty sure this will be for text wrapping! (see the TextSource for how EOL works)
-                TextLineBreak? lastLineBreak = null;
-                TextLine textElement = null;
-
-                // First Pass Measurement (MAKES MULTIPLE CALLS TO TextSource!!!)
+                // MSFT Advanced Text Formatting (Makes multiple calls to ITextRunProvider)
                 //
-                textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
-                                                    characterOffset,                              // Character offset to ITextSource
-                                                    _visualInputData.ConstraintSize.Width,        // UI Width
-                                                    _visualInputData.DefaultParagraphProperties,  // Visual Properties (Default Properties)
-                                                    lastLineBreak/*,                              // Last Line Break
-                                                    _textRunCache*/);                             // TextRunCache (MSFT) stores output of formatter
+                var textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
+                                                        builder.Offset,                               // Character offset to ITextSource
+                                                        _visualInputData.ConstraintSize.Width,        // UI Width
+                                                        _visualInputData.DefaultParagraphProperties,  // Visual Properties (Default Properties)
+                                                        lastLineBreak /*,                             // Last Line Break
+                                                        _textRunCache*/);                             // TextRunCache (MSFT) stores output of formatter
 
-                // Text Visual Y-Position
-                textVisualHeight = (textLineIndex) * textElement.TextHeight;
+                // Visual Size / Offset
+                builder.UpdateVisualSize(textElement);
 
-                // Text Bounds
-                var textVisualBounds = new Rect(0, textVisualHeight, textElement.WidthIncludingTrailingWhitespace, textElement.TextHeight);
+                // MSFT "Advanced" Text Formatting:  I get to complain here because I've put in
+                // time to figure this out! ^_^
+                //
+                // The Off-By-One issue is fairly "epic" because the return value from the formatter
+                // does not follow the text source all the time (!!!) There are extra characters implied
+                // where the source did not put them! 
+                //
+                // So, the EOP is one to watch for. It seems like this is the one causing issues. There
+                // is no actual character. So, follow the ITextRunProvider implementation and try to be
+                // sure you've accounted for every character.
+                //
+                // If you're stuck and need to verify, you must count your own EOL characters, each time!
+                // So, any extra length must be MSFT's backend.
+                // 
+                // ====
+                // Character Length (with EOP removed) (THIS MUST BE ACCURATE!)
+                //
+                // EOP:  Any element that is the TextEndOfParagraph (will also be TextEndOfLine)
+                // EOL:  Any element that is TextEndOfLine (we will verify in our text source)
+                //
 
-                // Update Desired Size
-                desiredHeight = textVisualHeight;
-                desiredWidth = Math.Max(desiredWidth, textElement.WidthIncludingTrailingWhitespace);
+                var countEOL = textElement.GetTextRunSpans().Count(x => x.Value is TextEndOfLine);
+                var countEOP = textElement.GetTextRunSpans().Count(x => x.Value is TextEndOfParagraph);
+
+                var expectedLineLength = textElement.Length - countEOP - countEOL;
 
                 if (lastLineBreak != null)
                     throw new Exception("Unhandled Line break detected!");
 
                 // VisualTextCollection -> BeginParagraph() -> BeginLine() -> Add Elements... -> EndLine() -> EndParagraph(...)
                 //
-                if (!visualCollection.AddingParagraph())
+                if (!builder.VisualText.AddingParagraph())
                 {
-                    visualCollection.BeginParagraph();
+                    builder.VisualText.BeginParagraph();
                 }
-                if (!visualCollection.AddingLine(textParagraphIndex + 1))
+                if (!builder.VisualText.AddingLine(builder.ParagraphIndex + 1))
                 {
-                    visualCollection.BeginLine();
+                    builder.VisualText.BeginLine();
                 }
 
                 foreach (var span in textElement.GetTextRunSpans())
                 {
-                    // EOP
+                    // MSFT BUG!!!  span.Length (may equal) textElement.Length 
+                    //
+                    // Issue:  This seems to be true even for individual span segments when
+                    //         they are the only segment! 
+                    //
+                    // Fix:    For proper character offset, just remove EOL characters when
+                    //         adding it to the builder's offset.
+                    //
+
+                    var characterLength = span.Length - countEOL;
+
+                    // EOL
                     //
                     if (span.Value is TextEndOfLine)
                     {
-                        visualCollection.Add(span, new TextEndOfLineElement(spanOffset));
+                        builder.VisualText.Add(span, new TextEndOfLineElement());
 
-                        // NON-TEXT SPANS ONLY!
-                        spanOffset += span.Length;
+                        // OFFSET (this is the '\r' character)
+                        builder.Offset++;
 
                         // LINE INCREMENTERS
-                        lastLineCharacterOffset += characterOffset;
-                        textLineIndex++;
+                        builder.LineOffset = builder.Offset;
+                        builder.LineIndex++;
 
-                        // VisualCollection -> EndLine()
-                        visualCollection.EndLine();
+                        // VisualCollection -> EndLine() (VALIDATE)
+                        builder.VisualText.EndLine(expectedLineLength);
                     }
 
-                    // EOL
+                    // EOP
                     //
                     // NOTE*** EOL may also be EOP
                     //
                     if (span.Value is TextEndOfParagraph)
                     {
-                        // NON-TEXT SPANS ONLY!
-                        spanOffset += span.Length;
-
                         // PARAGRAPH INCREMENTERS
-                        textParagraphIndex++;
+                        builder.ParagraphIndex++;
 
                         // VisualCollection -> EndParagraph( EOP )
-                        visualCollection.EndParagraph(span, new TextEndOfParagraphElement(spanOffset));
+                        builder.VisualText.EndParagraph(span, new TextEndOfParagraphElement());
                     }
 
                     // NOTE*** If there has already been an EOL / EOP, then the VisualTextCollection will
@@ -220,44 +237,64 @@ namespace SimpleTextEditor.Text
                     //
                     if (span.Value is TextCharacters)
                     {
+                        if (span.Value is TextEndOfLine ||
+                            span.Value is TextEndOfParagraph)
+                            throw new Exception("EOL / EOP formatting error! End of line characters are being treated as text!");
+
+                        if ((builder.Offset + characterLength) >= _textSource.GetLength())
+                            throw new Exception("Trying to add visual characters past the end of the text source!");
+
                         // Text Position 
-                        var position = new TextPosition(characterOffset,                                        // Offsets
-                                                        characterOffset - lastLineCharacterOffset + 1,          // Numbers
-                                                        textLineIndex + 1,
-                                                        textParagraphIndex + 1);
+                        var position = new TextPosition(builder.Offset,                                        // Offsets
+                                                        builder.Offset - builder.LineOffset + 1,               // Column Number
+                                                        builder.LineIndex + 1,
+                                                        builder.ParagraphIndex + 1);
 
                         // Character Boundaries:  These were easier to do as we build them, rather than during user interaction.
                         //                        THESE MUST BE ONLY THE GLYPHS THAT RELATE TO THE ACTUAL TEXT SOURCE!
                         //
                         var characterBounds = textElement.GetIndexedGlyphRuns()
                                                          .SelectMany(x => x.GlyphRun.AdvanceWidths)
-                                                         .Skip(lastLineCharacterOffset)
-                                                         .Take(characterOffset + span.Length - 1)
+                                                         .Skip(builder.Offset - builder.LineOffset)
+                                                         .Take(characterLength)
                                                          .Aggregate(new List<Rect>(), (list, nextWidth) =>
                                                          {
                                                              // Previous Offset-X
                                                              var currentWidth = list.Sum(x => x.Width);
 
                                                              // Current Character Bounds
-                                                             list.Add(new Rect(currentWidth, textVisualHeight, nextWidth, textElement.TextHeight));
+                                                             list.Add(new Rect(currentWidth, builder.VisualOffset.Y, nextWidth, textElement.TextHeight));
 
                                                              // Re-iterate
                                                              return list;
                                                          })
                                                          .ToArray();
 
+                        // TEXT LENGTH! The formatter's result has other characters that are EOL / EOP characters. We must
+                        //              validate the proper character length and store it here! These character bounds will
+                        //              be treated as the actual text length!
+                        //
+                        if (characterBounds.Length != characterLength)
+                            throw new Exception("Character bounds improper calculation!");
+
+                        // Visual Bounds
+                        var textVisualBounds = characterBounds.Aggregate(new Rect(), (rect, nextRect) =>
+                        {
+                            rect.Union(nextRect);
+                            return rect;
+                        });
+
                         // Text Element:  The TextLine has a Draw() method for WPF. It may be that we end
                         //                up taking the glyphs apart and storing them to recall in the 
                         //                OnRender instead.
                         //
-                        var element = new TextElement(characterBounds, textVisualBounds, position, spanOffset);
+                        var element = new TextElement(characterBounds, textVisualBounds, position);
 
-                        visualCollection.Add(textElement, element);
+                        // VisualCollection -> Add (element)
+                        builder.VisualText.Add(textElement, element);
 
                         // CHARACTERS (ARE) SPANS! (Spans can include EOP / EOL, but these do not index the ITextSource)
-                        lastLineCharacterOffset += span.Length;
-                        characterOffset += span.Length;
-                        spanOffset += span.Length;
+                        builder.Offset += characterLength;
                     }
 
                     if (span.Value is not TextEndOfLine &&
@@ -267,14 +304,11 @@ namespace SimpleTextEditor.Text
                 }
             }
 
-            if (visualCollection.AddingLine(textParagraphIndex + 1) ||
-                visualCollection.AddingParagraph())
-                throw new Exception("VisualCollection not properly closed! Check EOP / EOL issues!");
+            // Final Validation
+            builder.Validate();
 
-            _lastOutputData = new VisualOutputData(visualCollection,
-                                                   _visualInputData.ConstraintSize,
-                                                   new Size(desiredWidth, desiredHeight),
-                                                   _textSource.GetLength());
+            // Build Output
+            _lastOutputData = builder.BuildOutput();
 
             _invalid = false;
         }

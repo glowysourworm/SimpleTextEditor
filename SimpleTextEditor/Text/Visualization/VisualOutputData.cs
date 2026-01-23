@@ -25,12 +25,19 @@ namespace SimpleTextEditor.Text.Visualization
         public int ElementCount { get; }
 
         /// <summary>
+        /// This is returned by any line of text by the formatter, even for an empty line, and used
+        /// for caret calculations.
+        /// </summary>
+        public double DefaultTextHeight { get; }
+
+        /// <summary>
         /// Returns collection of visual elements
         /// </summary>
         public VisualTextCollection VisualCollection { get; }
 
-        public VisualOutputData(VisualTextCollection visualCollection, Size constraint, Size desiredSize, int sourceLength)
+        public VisualOutputData(VisualTextCollection visualCollection, Size constraint, Size desiredSize, int sourceLength, double defaultTextHeight)
         {
+            this.DefaultTextHeight = defaultTextHeight;
             this.ConstraintSize = constraint;
             this.DesiredSize = desiredSize;
             this.SourceLength = sourceLength;
