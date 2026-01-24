@@ -135,12 +135,22 @@ namespace SimpleTextEditor.Text
             // 1) EOL text elements are added for each EOL character ('\r')
             // 2) EOP text elements are added ONLY for paragraph breaks, (AND) (ONE EXTRA ITERATION) (see SimpleTextRunProvider.cs)
             //
-            while (builder.BackendOffset <= _textSource.GetLength())
+            // So, the builder's offset is allowed to overflow by one; but there will not be any of our
+            // result offsets that will have the overflow. The paragraph's length is not added to the 
+            // builder's offset.
+            //
+            // The final problem is two cases: 1) lines terminated with EOL character, and 2) lines with no
+            // terminating character!
+            //
+            // So, the while loop will check for this case; and the VisualTextCollection must have an 
+            // option with how to end paragraphs and lines (that have no terminator).
+            //
+            do
             {
                 // MSFT Advanced Text Formatting (Makes multiple calls to ITextRunProvider)
                 //
                 var textElement = _formatter.FormatLine(_textRunProvider as TextSource,               // TextStore sub-class
-                                                        builder.BackendOffset,                        // Character offset to ITextSource
+                                                        builder.Offset,                               // Character offset to ITextSource
                                                         _visualInputData.ConstraintSize.Width,        // UI Width
                                                         _visualInputData.DefaultParagraphProperties,  // Visual Properties (Default Properties)
                                                         lastLineBreak /*,                             // Last Line Break
@@ -175,20 +185,10 @@ namespace SimpleTextEditor.Text
 
                 foreach (var span in textElement.GetTextRunSpans())
                 {
-                    // BackendOffset should follow the MSFT output
-                    builder.BackendOffset += span.Length;
-
-                    // VisualTextCollection -> BeginParagraph() -> BeginLine() -> Add Elements... -> EndLine() -> EndParagraph(...)
-                    //
-                    if (!builder.VisualText.AddingParagraph())
-                    {
-                        builder.VisualText.BeginParagraph();
-                    }
-                    if (!builder.VisualText.AddingLine(builder.ParagraphIndex + 1) &&
-                        span.Value is not TextEndOfParagraph)
-                    {
-                        builder.VisualText.BeginLine();
-                    }
+                    if (span.Value is not TextEndOfLine &&
+                        span.Value is not TextEndOfParagraph &&
+                        span.Value is not TextCharacters)
+                        throw new Exception("Unhandled TextRun Type:  SimpleTextFormatter");
 
                     // MSFT BUG!!!  span.Length (may equal) textElement.Length 
                     //
@@ -205,31 +205,15 @@ namespace SimpleTextEditor.Text
                     //
                     if (span.Value is TextEndOfParagraph)
                     {
-                        // PARAGRAPH INCREMENTERS
-                        builder.ParagraphIndex++;
-
                         // VisualCollection -> EndParagraph( EOP )
-                        builder.VisualText.EndParagraph(span, new TextEndOfParagraphElement());
+                        builder.ProcessEOP(span, new TextEndOfParagraphElement());
                     }
 
                     // EOL
                     //
                     else if (span.Value is TextEndOfLine)
                     {
-                        builder.VisualText.Add(span, new TextEndOfLineElement());
-
-                        // VAILDATION: Does not include the '\r' character
-                        var lineLength = builder.Offset - builder.LineOffset;
-
-                        // OFFSET (this is the '\r' character)
-                        //builder.Offset++;
-
-                        // LINE INCREMENTERS
-                        builder.LineOffset = builder.Offset;
-                        builder.LineIndex++;
-
-                        // VisualCollection -> EndLine() (VALIDATE)
-                        builder.VisualText.EndLine(lineLength);
+                        builder.ProcessEOL(span, new TextEndOfLineElement());
                     }
 
                     // NOTE*** If there has already been an EOL / EOP, then the VisualTextCollection will
@@ -237,18 +221,6 @@ namespace SimpleTextEditor.Text
                     //
                     else if (span.Value is TextCharacters)
                     {
-                        //var countEOL = span.Value.Count(x => x.Value is TextEndOfLine);
-                        //var countEOP = textElement.GetTextRunSpans().Count(x => x.Value is TextEndOfParagraph);
-                        //var ourEOLs = _textSource.GetString(builder.Offset, textElement.Length).Count(x => x == '\r');
-                        //var characterLength = span.Length;
-
-                        if (span.Value is TextEndOfLine ||
-                            span.Value is TextEndOfParagraph)
-                            throw new Exception("EOL / EOP formatting error! End of line characters are being treated as text!");
-
-                        if ((builder.Offset + span.Length) >= _textSource.GetLength())
-                            throw new Exception("Trying to add visual characters past the end of the text source!");
-
                         // Text Position 
                         var position = new TextPosition(builder.Offset,                                        // Offsets
                                                         builder.Offset - builder.LineOffset + 1,               // Column Number
@@ -279,8 +251,8 @@ namespace SimpleTextEditor.Text
                         //              validate the proper character length and store it here! These character bounds will
                         //              be treated as the actual text length!
                         //
-                        if (characterBounds.Length != span.Length)
-                            throw new Exception("Character bounds improper calculation!");
+                        //if (characterBounds.Length != span.Length)
+                        //    throw new Exception("Character bounds improper calculation!");
 
                         // Visual Bounds
                         var textVisualBounds = characterBounds.Aggregate(new Rect(), (rect, nextRect) =>
@@ -296,18 +268,11 @@ namespace SimpleTextEditor.Text
                         var element = new TextElement(characterBounds, textVisualBounds, position);
 
                         // VisualCollection -> Add (element)
-                        builder.VisualText.Add(textElement, element);
-
-                        // CHARACTERS (ARE) SPANS! (Spans can include EOP / EOL, but these do not index the ITextSource)
-                        builder.Offset += span.Length;
+                        builder.ProcessAddCharacters(textElement, span, element);
                     }
-
-                    if (span.Value is not TextEndOfLine &&
-                        span.Value is not TextEndOfParagraph &&
-                        span.Value is not TextCharacters)
-                        throw new Exception("Unhandled TextRun Type:  SimpleTextFormatter");
                 }
-            }
+
+            } while (builder.Offset < _textSource.GetLength() || builder.IsAddingParagraph);
 
             // Final Validation
             builder.Validate();

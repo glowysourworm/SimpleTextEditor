@@ -13,7 +13,7 @@ namespace SimpleTextEditor.Sample
 
         private void Editor_Loaded(object sender, RoutedEventArgs e)
         {
-            this.Editor.SetText("Welcome to  Simple Text Editor!\r");
+            this.Editor.SetText("Welcome to  Simple Text Editor!");
         }
     }
 }

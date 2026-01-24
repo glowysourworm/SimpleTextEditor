@@ -133,27 +133,81 @@ namespace SimpleTextEditor.Text.Visualization
             _addingLine = false;
             _currentLine = null;
         }
-        public void EndParagraph(TextSpan<TextRun> closingSpan, ITextSpan span)
+
+        /// <summary>
+        /// Closes the current paragraph. The user code must specify if there was an end of line character so that
+        /// the text collection can handle the current line appropriately. It will use the information during validation.
+        /// Returns true if there was a trailing line present, otherwise returns false.
+        /// </summary>
+        /// <param name="closingSpan">EOP span</param>
+        /// <param name="span">The ITextSpan marker for this end of paragraph</param>
+        /// <param name="lastLineLengthExpected">The length of the last (or currently working) line. Validates previous line entry.</param>
+        /// <param name="noEOLCharacterLastLine">Set to true if there was no EOL character on the previous line (making it impossible to close the line out)</param>
+        /// <exception cref="Exception">Throws validation exceptions for: 1) The current state of the builder, and 2) EOL validation</exception>
+        public bool EndParagraph(TextSpan<TextRun> closingSpan, ITextSpan span, int lastLineLengthExpected, bool noEOLCharacterLastLine)
         {
+            var trailingLine = false;
+
             if (!_addingParagraph)
                 throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
 
             if (_addingLine)
-                throw new Exception("Working on visual line! Must call EndLine() before this operation!");
+            {
+                // Non-Terminated Line
+                if (noEOLCharacterLastLine)
+                {
+                    if (_currentLine == null)
+                        throw new Exception("Improper use of VisualTextCollection:  Indicated an end of paragraph before beginning a paragraph.");
+
+                    EndLine(lastLineLengthExpected);
+
+                    trailingLine = true;
+                }
+
+                // Invalid EOP
+                else
+                    throw new Exception("Working on visual line! Must call EndLine() before this operation!");
+            }
+
 
             if (!_visualParagraphs.ContainsKey(_paragraphCounter))
                 _visualParagraphs.Add(_paragraphCounter, _currentParagraph);
+
+            // EOL Issue:  1) Line ends in \r, 2) Line ends with another character
+            //
+            // We have to keep track of both the visual text and the ITextSource
+            // offset.
+            //
+            // Both cases should have complete closed lines. But, the \r case must
+            // impose a new line is added to the visual text source.
+            //
+            // Finally, the position calculations (all the public user functions) 
+            // must assume that the user is unaware of any additional visual lines
+            // added to the source!
+            //
 
             _visualParagraphs[_paragraphCounter].SetClosingSpan(span);
 
             _addingParagraph = false;
             _currentParagraph = null;
+
+            return trailingLine;
         }
         #endregion
 
         #region (public) Safe Access Methods
+        public int GetCharCount(int paragraphNumber)
+        {
+            if (_visualParagraphs.Count == 0)
+                return 0;
+
+            return _visualParagraphs[paragraphNumber].Lines.Sum(x => x.Length);
+        }
         public int GetLineCount(int paragraphNumber)
         {
+            if (_visualParagraphs.Count == 0)
+                return 0;
+
             return _visualParagraphs[paragraphNumber].Lines.Count();
         }
         public int GetParagraphCount()
@@ -249,9 +303,7 @@ namespace SimpleTextEditor.Text.Visualization
             return lastParagraph.Value
                                 .Lines
                                 .LastOrDefault()?
-                                .Elements?
-                                .LastOrDefault()?
-                                .Position;
+                                .GetEndPosition();
         }
         public ITextPosition? GetAppendPosition(int paragraphNumber)
         {

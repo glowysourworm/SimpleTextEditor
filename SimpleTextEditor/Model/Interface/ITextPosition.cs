@@ -3,7 +3,7 @@
     public interface ITextPosition
     {
         /// <summary>
-        /// Offset into the text source for this position (character)
+        /// Offset into the raw text source for this position (character)
         /// </summary>
         int Offset { get; }
 

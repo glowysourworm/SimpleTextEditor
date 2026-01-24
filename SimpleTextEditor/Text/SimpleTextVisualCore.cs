@@ -49,6 +49,10 @@ namespace SimpleTextEditor.Text
         {
             return _textSource.GetLength();
         }
+        public int GetVisualTextLength()
+        {
+            return _textSource.GetLength() - _textSource.GetEOLCharacterCount(0, _textSource.GetLength());
+        }
         public ITextPosition AppendText(string text)
         {
             if (!_formatter.IsInitialized)

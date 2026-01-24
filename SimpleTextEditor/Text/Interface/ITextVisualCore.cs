@@ -20,6 +20,11 @@ namespace SimpleTextEditor.Text.Interface
         int GetTextLength();
 
         /// <summary>
+        /// Returns the length of the text that is displayed. This should follow the caret position.
+        /// </summary>
+        int GetVisualTextLength();
+
+        /// <summary>
         /// Initializes the core with the constraint (control) size. This must be called prior to loading,
         /// modifying text, or retrieveing formatted text output.
         /// </summary>

@@ -88,7 +88,7 @@ namespace SimpleTextEditor.Text
                 case ControlInput.None:
                     break;
                 case ControlInput.Backspace:
-                    if (_visualCore.GetTextLength() == 0)
+                    if (_visualCore.GetVisualTextLength() == 0)
                         return false;
 
                     if (_caret.Position.Offset <= 0)
@@ -97,7 +97,7 @@ namespace SimpleTextEditor.Text
                     caretPosition = _visualCore.RemoveText(_caret.Position.Offset, 1);
                     break;
                 case ControlInput.DeleteCurrentCharacter:
-                    if (_caret.Position.Offset + 1 >= _visualCore.GetTextLength())
+                    if (_caret.Position.Offset + 1 >= _visualCore.GetVisualTextLength())
                         return false;
 
                     caretPosition = _visualCore.RemoveText(_caret.Position.Offset + 1, 1);
@@ -144,7 +144,9 @@ namespace SimpleTextEditor.Text
                 throw new Exception("SimpleTextInputCore not yet initialized");
 
             _visualCore.ClearText();
-            _visualCore.AppendText(text);
+            var caretPosition = _visualCore.AppendText(text);
+
+            UpdateCaret(caretPosition, CaretPosition.AfterCharacter);
         }
 
         public bool ProcessTextInputAtCaret(string text)
@@ -163,7 +165,7 @@ namespace SimpleTextEditor.Text
 
             ITextPosition? caretPosition = null;
 
-            if (_caret.Position.Offset == _visualCore.GetTextLength() - 1)
+            if (_caret.Position.Offset == _visualCore.GetVisualTextLength() - 1)
                 caretPosition = _visualCore.AppendText(text);
 
             else
