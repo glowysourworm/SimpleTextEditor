@@ -14,6 +14,11 @@ namespace SimpleTextEditor.Component.Interface
         int TextLength { get; }
 
         /// <summary>
+        /// Default text height set by the visual core
+        /// </summary>
+        double GetDefaultTextHeight();
+
+        /// <summary>
         /// Processes requested control input: Move caret, Select text, Remove selected text, etc...
         /// </summary>        
         bool ProcessControlInput(ControlInput input);

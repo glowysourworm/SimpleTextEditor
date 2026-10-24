@@ -42,6 +42,10 @@ namespace SimpleTextEditor.Component
         {
             return _core.GetCaretBounds();
         }
+        public double GetDefaultTextHeight()
+        {
+            return _core.GetOutput().DefaultTextHeight;
+        }
         public bool ProcessControlInput(ControlInput input)
         {
             return _core.ProcessControlInput(input);

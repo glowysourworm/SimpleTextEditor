@@ -1,5 +1,6 @@
 ﻿using System.Windows.Media.TextFormatting;
 
+using SimpleTextEditor.Model;
 using SimpleTextEditor.Model.Interface;
 using SimpleTextEditor.Text.Visualization.Element.Interface;
 
@@ -28,14 +29,27 @@ namespace SimpleTextEditor.Text.Visualization
         int _startOffset;
         int _endOffset;
 
-        public VisualLineData(int lineNumber)
+        // Default ITextPosition (for empty line)
+        readonly ITextPosition _default;
+
+        /// <summary>
+        /// Creates a visual line:  The "empty" or "default" line ITextPosition is used to locate the beginning of a 
+        /// new line. This is used for the caret position; and for UI measurement.
+        /// </summary>
+        /// <param name="paragraphNumber">Paragraph number for the line</param>
+        /// <param name="lineNumber">Line number for the line</param>
+        /// <param name="defaultOffset">Offset for the first character (or caret)</param>
+        public VisualLineData(int paragraphNumber, int lineNumber, int defaultOffset)
         {
             this.LineNumber = lineNumber;
             _visualElements = new List<TextLine>();
             _elements = new List<ITextElement>();
             _spans = new List<ITextSpan>();
-            _startOffset = -1;
+
+            _startOffset = -1;                              // Leave these at -1 until user sets elements or spans
             _endOffset = -1;
+
+            _default = new TextPosition(defaultOffset, 1, lineNumber, paragraphNumber);
         }
 
         public void AddElement(TextLine element, ITextElement textElement)
@@ -88,7 +102,7 @@ namespace SimpleTextEditor.Text.Visualization
         public ITextPosition GetStartPosition()
         {
             if (_startOffset == -1)
-                throw new Exception("Must add elements to VisualLineData before usage!");
+                return _default;
 
             return _elements.First().Position;
         }
@@ -96,7 +110,7 @@ namespace SimpleTextEditor.Text.Visualization
         public ITextPosition GetEndPosition()
         {
             if (_startOffset == -1)
-                throw new Exception("Must add elements to VisualLineData before usage!");
+                return _default;
 
             return _elements.First().Position.WithOffset(this.EndOffset);
         }
@@ -104,13 +118,21 @@ namespace SimpleTextEditor.Text.Visualization
         public bool ContainsOffset(int offset)
         {
             if (_startOffset == -1)
-                throw new Exception("Must add elements to VisualLineData before usage!");
+                return false;
 
             if (offset < _startOffset ||
                 offset > _endOffset)
                 return false;
 
             return true;
+        }
+
+        /// <summary>
+        /// Returns true if this line represents an empty line
+        /// </summary>
+        public bool IsDefault()
+        {
+            return _startOffset == -1;
         }
 
         private void Validate()

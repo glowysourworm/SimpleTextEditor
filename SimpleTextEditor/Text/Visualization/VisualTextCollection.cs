@@ -63,7 +63,12 @@ namespace SimpleTextEditor.Text.Visualization
             _paragraphCounter++;
             _currentParagraph = new VisualParagraphData(_paragraphCounter);
         }
-        public void BeginLine()
+
+        /// <summary>
+        /// The default offset is the empty character (or placeholder) at the beginning of a new line. This should be
+        /// the current offset for the text rendering.
+        /// </summary>
+        public void BeginLine(int defaultOffset)
         {
             if (!_addingParagraph)
                 throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
@@ -73,7 +78,7 @@ namespace SimpleTextEditor.Text.Visualization
 
             _addingLine = true;
             _lineCounter++;
-            _currentLine = new VisualLineData(_lineCounter);
+            _currentLine = new VisualLineData(_paragraphCounter, _lineCounter, defaultOffset);     // Set offset for next line (default)
         }
 
         /// <summary>

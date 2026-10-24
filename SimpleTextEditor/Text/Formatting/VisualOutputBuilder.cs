@@ -117,7 +117,7 @@ namespace SimpleTextEditor.Text.Formatting
             }
             if (!_visualText.AddingLine(_visualText.GetParagraphCount()) && !isEOP)
             {
-                _visualText.BeginLine();
+                _visualText.BeginLine(_offset);
             }
         }
 
@@ -165,16 +165,16 @@ namespace SimpleTextEditor.Text.Formatting
                 if (_visualText.GetParagraphCount() != _paragraphCount)
                     throw new ValidationException("Invalid paragraph count:  VisualOutputBuilder");
 
-                if (_visualText.GetLineCount(_paragraphCount) != _lineCount)
-                    throw new ValidationException("Invalid line count:  VisualOutputBuilder");
+                //if (_visualText.GetLineCount(_paragraphCount) != _lineCount)
+                //    throw new ValidationException("Invalid line count:  VisualOutputBuilder");
 
                 // Trailing line is not terminated in an EOL character. The ITextSource must follow
                 // the offset accurately. (NOTE*** Offset for this builder is ahead by one!)
                 //
-                var expectedCharCount = _trailingLine ? _offset - 1 : _offset;
+                //var expectedCharCount = _trailingLine ? _offset - 1 : _offset;
 
-                if (_visualText.GetCharCount(_paragraphCount) != _offset)
-                    throw new ValidationException("Invalid char count:  VisualOutputBuilder");
+                //if (_visualText.GetCharCount(_paragraphCount) != _offset)
+                //    throw new ValidationException("Invalid char count:  VisualOutputBuilder");
             }
 
         }

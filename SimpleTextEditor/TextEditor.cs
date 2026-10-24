@@ -261,19 +261,29 @@ namespace SimpleTextEditor
                 {
                     var visualLine = _document.GetVisualText().GetVisualLine(paragraphIndex + 1, lineIndex + 1);
 
-                    // Get visual bounds for all elements in this line
-                    var visualBounds = visualLine.Elements.Aggregate(new Rect(position, position), (rect, element) =>
+                    // Empty Line
+                    if (visualLine.IsDefault())
                     {
-                        rect.Union(element.VisualBounds);
-                        return rect;
-                    });
+                        position.X = 0;
+                        position.Y += _document.GetDefaultTextHeight();
+                    }
 
-                    position.X = visualBounds.X;
-                    position.Y += visualBounds.Height;
-
-                    foreach (var visualElement in visualLine.VisualElements)
+                    else
                     {
-                        visualElement.Draw(drawingContext, position, InvertAxes.None);
+                        // Get visual bounds for all elements in this line
+                        var visualBounds = visualLine.Elements.Aggregate(new Rect(position, position), (rect, element) =>
+                        {
+                            rect.Union(element.VisualBounds);
+                            return rect;
+                        });
+
+                        position.X = visualBounds.X;
+                        position.Y += visualBounds.Height;
+
+                        foreach (var visualElement in visualLine.VisualElements)
+                        {
+                            visualElement.Draw(drawingContext, position, InvertAxes.None);
+                        }
                     }
                 }
             }
