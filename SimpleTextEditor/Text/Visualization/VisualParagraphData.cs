@@ -1,4 +1,6 @@
-﻿using SimpleTextEditor.Text.Visualization.Element.Interface;
+﻿using System.Windows;
+
+using SimpleTextEditor.Text.Visualization.Element.Interface;
 
 using SimpleWpf.Extensions;
 
@@ -17,6 +19,7 @@ namespace SimpleTextEditor.Text.Visualization
                 return _lines;
             }
         }
+        public Rect Boundary { get; private set; }
 
         List<VisualLineData> _lines;
         ITextSpan _closingSpan;
@@ -24,11 +27,15 @@ namespace SimpleTextEditor.Text.Visualization
         public VisualParagraphData(int paragraphNumber)
         {
             this.ParagraphNumber = paragraphNumber;
+            this.Boundary = new Rect();
+
             _lines = new List<VisualLineData>();
         }
 
         public void AddLine(VisualLineData lineData)
         {
+            this.Boundary.Expand(lineData.VisualOffset);
+
             _lines.Add(lineData);
         }
 

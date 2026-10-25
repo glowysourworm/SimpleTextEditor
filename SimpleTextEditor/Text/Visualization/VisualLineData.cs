@@ -1,4 +1,5 @@
-﻿using System.Windows.Media.TextFormatting;
+﻿using System.Windows;
+using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model;
 using SimpleTextEditor.Model.Interface;
@@ -15,6 +16,7 @@ namespace SimpleTextEditor.Text.Visualization
     {
         public int ParagraphNumber { get; }
         public int LineNumber { get; }
+        public Point VisualOffset { get; }
         public int StartOffset { get { return _startOffset; } }
         public int EndOffset { get { return _endOffset; } }
         public int Length { get { return IsEmpty() ? 0 : _endOffset - _startOffset + 1; } }
@@ -38,8 +40,9 @@ namespace SimpleTextEditor.Text.Visualization
         /// <param name="paragraphNumber">Paragraph number for the line</param>
         /// <param name="lineNumber">Line number for the line</param>
         /// <param name="offset">Offset for the first character (or caret in the case of an empty line)</param>
-        public VisualLineData(int paragraphNumber, int lineNumber, int offset)
+        public VisualLineData(Point visualOffset, int paragraphNumber, int lineNumber, int offset)
         {
+            this.VisualOffset = visualOffset;
             this.ParagraphNumber = paragraphNumber;
             this.LineNumber = lineNumber;
 

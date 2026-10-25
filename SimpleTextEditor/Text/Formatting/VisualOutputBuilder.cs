@@ -40,10 +40,12 @@ namespace SimpleTextEditor.Text.Formatting
         int _lineOffset;
         int _lineCount;
         int _paragraphCount;
+        bool _trailingLine;
+
         Size _constraintSize;
         Size _desiredSize;
         Point _visualOffset;
-        bool _trailingLine;
+
 
         public VisualOutputBuilder(ITextSource textSource, Size constraintSize)
         {
@@ -63,7 +65,7 @@ namespace SimpleTextEditor.Text.Formatting
         public void ProcessAddCharacters(TextLine visualElement, TextSpan<TextRun> span, ITextElement textElement)
         {
             // EOP / EOL Tracking
-            BeginAddElement(span, textElement);
+            BeginAddElement(visualElement, span, textElement);
 
             // Visual Collection
             _visualText.Add(visualElement, textElement);
@@ -71,18 +73,17 @@ namespace SimpleTextEditor.Text.Formatting
             // Offset
             _offset += textElement.Length;
         }
-        public void ProcessEOL(TextSpan<TextRun> visualElement, ITextSpan textElement)
+        public void ProcessEOL(TextLine visualElement, TextSpan<TextRun> span, ITextSpan textElement)
         {
             // TODO: VERIFY HOW THIS EOL WOULD APPEAR
             if (!_visualText.AddingParagraph())
                 throw new Exception("Trying to process end of line before beginning paragraph");
 
-            // TODO: WRAP THIS UP!  MSFT GIVES EOL WHICH WOULD ALSO BE \r (?!)
-            if (!_visualText.AddingLine(_visualText.GetParagraphCount() - 1))
-                _visualText.BeginLine(_offset);
+            // Update Offsets
+            BeginAddElement(visualElement, span, textElement);
 
             // Visual Collection
-            _visualText.Add(visualElement, new TextEndOfLineElement());
+            _visualText.Add(span, new TextEndOfLineElement());
 
             // VisualCollection -> EndLine() (VALIDATE) (NOTE*** Offset is AHEAD BY ONE!)
             _visualText.EndLine(_offset - _lineOffset);
@@ -94,21 +95,13 @@ namespace SimpleTextEditor.Text.Formatting
             _lineOffset = _offset;
             _lineCount++;
         }
-        public void ProcessEOP(TextSpan<TextRun> visualElement, ITextSpan textElement)
+        public void ProcessEOP(TextLine visualElement, TextSpan<TextRun> span, ITextSpan textElement)
         {
-            // End Of Paragraph:  MSFT will return and EOP when: 1) the EOL (\r, ...) character is
-            //                    part of the stream; or 2) when the end of a line has no EOL character
-            //                    it will give one at the end of the line by default.
-            //
-            //                    As above, end of line MSFT return values are for text wrapping. So,
-            //                    ours are the visual lines; and we must process the MSFT output to make
-            //                    sure it agrees with ours.
-            //
-            // 1) Empty Paragraph:  We will not currently be processing a paragraph.
-            // 2) No End of Line:   We will close the current line
+            // Update Offsets
+            BeginAddElement(visualElement, span, textElement);
 
             // VisualCollection -> EndParagraph() (VALIDATE) (also validates current line which is not terminated with EOL!)
-            var trailingLine = _visualText.EndParagraph(visualElement,
+            var trailingLine = _visualText.EndParagraph(span,
                                                         textElement,
                                                         _offset - _lineOffset,
                                                         _visualText.AddingLine(this.ParagraphIndex + 1));
@@ -121,8 +114,16 @@ namespace SimpleTextEditor.Text.Formatting
             _paragraphCount++;
         }
 
-        private void BeginAddElement(TextSpan<TextRun> visualElement, ITextSpan textElement)
+        private void BeginAddElement(TextLine visualElement, TextSpan<TextRun> span, ITextSpan textElement)
         {
+            // Visual Boundary:  Update to track addition of lines; and use the VisualTextCollection to 
+            //                   get updated paragraph and line bounds.
+            //
+
+            // Default Text Height (works for empty text source)
+            if (this.DefaultTextHeight == 0)
+                this.DefaultTextHeight = visualElement.TextHeight;
+
             // VisualTextCollection -> BeginParagraph() -> BeginLine() -> Add Elements... -> EndLine() -> EndParagraph(...)
             //
             if (!_visualText.AddingParagraph())
@@ -131,8 +132,17 @@ namespace SimpleTextEditor.Text.Formatting
             }
             if (!_visualText.AddingLine(_visualText.GetParagraphCount()))
             {
-                _visualText.BeginLine(_offset);
+                _visualText.BeginLine(_visualOffset, _offset);
             }
+
+            // Text Visual Y-Position
+            _visualOffset.Y = (this.LineIndex) * visualElement.TextHeight;
+
+            // Update Desired Size
+            var boundary = _visualText.GetBoundary();
+
+            _desiredSize.Height = boundary == Rect.Empty ? 0 : boundary.Height;
+            _desiredSize.Width = boundary == Rect.Empty ? 0 : boundary.Width;
         }
 
 
@@ -163,14 +173,20 @@ namespace SimpleTextEditor.Text.Formatting
                 if (_offset != 0)
                     throw new ValidationException("Invalid char count for empty text case!");
 
-                if (_trailingLine)
-                    throw new ValidationException("Invalid trailing line for empty text case!");
+                //if (_trailingLine)
+                //    throw new ValidationException("Invalid trailing line for empty text case!");
 
                 if (_visualText.GetParagraphCount() != 1)
                     throw new ValidationException("Invalid paragraph count:  VisualOutputBuilder");
 
                 if (_visualText.GetLineCount(_paragraphCount) != 0)
-                    throw new ValidationException("Invalid line count:  VisualOutputBuilder");
+                {
+                    for (int index = 0; index < _visualText.GetLineCount(_paragraphCount); index++)
+                    {
+                        if (!_visualText.GetVisualLine(_paragraphCount, index + 1).IsEmpty())
+                            throw new ValidationException("Invalid Lines:  These must all be empty lines");
+                    }
+                }
             }
 
             // EXPECTED CHAR COUNT
@@ -202,20 +218,6 @@ namespace SimpleTextEditor.Text.Formatting
                                         this.DesiredSize,
                                         _textSource.GetLength(),
                                         this.DefaultTextHeight);
-        }
-
-        public void UpdateVisualSize(TextLine textElement)
-        {
-            // Default Text Height (works for empty text source)
-            if (this.DefaultTextHeight == 0)
-                this.DefaultTextHeight = textElement.TextHeight;
-
-            // Text Visual Y-Position
-            _visualOffset.Y = (this.LineIndex) * textElement.TextHeight;
-
-            // Update Desired Size
-            _desiredSize.Height = _visualOffset.Y;
-            _desiredSize.Width = Math.Max(_desiredSize.Width, textElement.WidthIncludingTrailingWhitespace);
         }
     }
 }

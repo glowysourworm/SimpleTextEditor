@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Windows;
 using System.Windows.Media.TextFormatting;
 
 using SimpleTextEditor.Model.Interface;
@@ -66,9 +67,10 @@ namespace SimpleTextEditor.Text.Visualization
 
         /// <summary>
         /// The default offset is the empty character (or placeholder) at the beginning of a new line. This should be
-        /// the current offset for the text rendering.
+        /// the current offset for the text rendering. The visual offset is the top left corner of the assumed bounding
+        /// box for the line's characters.
         /// </summary>
-        public void BeginLine(int defaultOffset)
+        public void BeginLine(Point visualOffset, int offset)
         {
             if (!_addingParagraph)
                 throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
@@ -78,7 +80,7 @@ namespace SimpleTextEditor.Text.Visualization
 
             _addingLine = true;
             _lineCounter++;
-            _currentLine = new VisualLineData(_paragraphCounter, _lineCounter, defaultOffset);     // Set offset for next line (default)
+            _currentLine = new VisualLineData(visualOffset, _paragraphCounter, _lineCounter, offset);     // Set offset for next line (default)
         }
 
         /// <summary>
@@ -165,10 +167,7 @@ namespace SimpleTextEditor.Text.Visualization
             var trailingLine = false;
 
             if (!_addingParagraph)
-            {
-                // TODO: MAKE THESE "EMPTY PARAGRAPHS"
-                BeginParagraph();
-            }
+                throw new Exception("Trying to end paragraph before beginning a new paragraph");
 
             if (_addingLine)
             {
@@ -232,6 +231,21 @@ namespace SimpleTextEditor.Text.Visualization
         public int GetParagraphCount()
         {
             return _paragraphCounter;
+        }
+        public Rect GetBoundary()
+        {
+            var result = Rect.Empty;
+
+            foreach (var paragraph in _visualParagraphs.Values)
+            {
+                if (result == Rect.Empty)
+                    result = paragraph.Boundary;
+
+                else
+                    result.Union(paragraph.Boundary);
+            }
+
+            return result;
         }
         public bool AddingLine(int paragraphNumber)
         {

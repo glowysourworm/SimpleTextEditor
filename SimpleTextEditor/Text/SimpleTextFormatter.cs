@@ -156,9 +156,6 @@ namespace SimpleTextEditor.Text
                                                         lastLineBreak /*,                             // Last Line Break
                                                         _textRunCache*/);                             // TextRunCache (MSFT) stores output of formatter
 
-                // Visual Size / Offset
-                builder.UpdateVisualSize(textElement);
-
                 // MSFT "Advanced" Text Formatting:  I get to complain here because I've put in
                 // time to figure this out! ^_^
                 //
@@ -206,14 +203,14 @@ namespace SimpleTextEditor.Text
                     if (span.Value is TextEndOfParagraph)
                     {
                         // VisualCollection -> EndParagraph( EOP )
-                        builder.ProcessEOP(span, new TextEndOfParagraphElement());
+                        builder.ProcessEOP(textElement, span, new TextEndOfParagraphElement());
                     }
 
                     // EOL
                     //
                     else if (span.Value is TextEndOfLine)
                     {
-                        builder.ProcessEOL(span, new TextEndOfLineElement());
+                        builder.ProcessEOL(textElement, span, new TextEndOfLineElement());
                     }
 
                     // NOTE*** If there has already been an EOL / EOP, then the VisualTextCollection will
