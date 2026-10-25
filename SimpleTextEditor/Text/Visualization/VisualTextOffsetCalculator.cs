@@ -29,7 +29,7 @@ namespace SimpleTextEditor.Text.Visualization
             if (visualElement == null)
                 throw new Exception("Invalid visual line number");
 
-            if (visualElement.IsDefault())
+            if (visualElement.IsEmpty())
                 return outputData.DefaultTextHeight;
 
             return visualElement.Elements.First().VisualBounds.Height;

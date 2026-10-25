@@ -63,7 +63,7 @@ namespace SimpleTextEditor.Text.Formatting
         public void ProcessAddCharacters(TextLine visualElement, TextSpan<TextRun> span, ITextElement textElement)
         {
             // EOP / EOL Tracking
-            BeginAddElement(span, textElement, false);
+            BeginAddElement(span, textElement);
 
             // Visual Collection
             _visualText.Add(visualElement, textElement);
@@ -73,8 +73,13 @@ namespace SimpleTextEditor.Text.Formatting
         }
         public void ProcessEOL(TextSpan<TextRun> visualElement, ITextSpan textElement)
         {
-            // EOP / EOL Tracking
-            BeginAddElement(visualElement, textElement, false);
+            // TODO: VERIFY HOW THIS EOL WOULD APPEAR
+            if (!_visualText.AddingParagraph())
+                throw new Exception("Trying to process end of line before beginning paragraph");
+
+            // TODO: WRAP THIS UP!  MSFT GIVES EOL WHICH WOULD ALSO BE \r (?!)
+            if (!_visualText.AddingLine(_visualText.GetParagraphCount() - 1))
+                _visualText.BeginLine(_offset);
 
             // Visual Collection
             _visualText.Add(visualElement, new TextEndOfLineElement());
@@ -91,7 +96,16 @@ namespace SimpleTextEditor.Text.Formatting
         }
         public void ProcessEOP(TextSpan<TextRun> visualElement, ITextSpan textElement)
         {
-            BeginAddElement(visualElement, textElement, true);
+            // End Of Paragraph:  MSFT will return and EOP when: 1) the EOL (\r, ...) character is
+            //                    part of the stream; or 2) when the end of a line has no EOL character
+            //                    it will give one at the end of the line by default.
+            //
+            //                    As above, end of line MSFT return values are for text wrapping. So,
+            //                    ours are the visual lines; and we must process the MSFT output to make
+            //                    sure it agrees with ours.
+            //
+            // 1) Empty Paragraph:  We will not currently be processing a paragraph.
+            // 2) No End of Line:   We will close the current line
 
             // VisualCollection -> EndParagraph() (VALIDATE) (also validates current line which is not terminated with EOL!)
             var trailingLine = _visualText.EndParagraph(visualElement,
@@ -107,7 +121,7 @@ namespace SimpleTextEditor.Text.Formatting
             _paragraphCount++;
         }
 
-        private void BeginAddElement(TextSpan<TextRun> visualElement, ITextSpan textElement, bool isEOP)
+        private void BeginAddElement(TextSpan<TextRun> visualElement, ITextSpan textElement)
         {
             // VisualTextCollection -> BeginParagraph() -> BeginLine() -> Add Elements... -> EndLine() -> EndParagraph(...)
             //
@@ -115,7 +129,7 @@ namespace SimpleTextEditor.Text.Formatting
             {
                 _visualText.BeginParagraph();
             }
-            if (!_visualText.AddingLine(_visualText.GetParagraphCount()) && !isEOP)
+            if (!_visualText.AddingLine(_visualText.GetParagraphCount()))
             {
                 _visualText.BeginLine(_offset);
             }

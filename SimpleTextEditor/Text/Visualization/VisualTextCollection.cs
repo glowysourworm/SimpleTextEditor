@@ -151,10 +151,24 @@ namespace SimpleTextEditor.Text.Visualization
         /// <exception cref="Exception">Throws validation exceptions for: 1) The current state of the builder, and 2) EOL validation</exception>
         public bool EndParagraph(TextSpan<TextRun> closingSpan, ITextSpan span, int lastLineLengthExpected, bool noEOLCharacterLastLine)
         {
+            // End Of Paragraph:  MSFT will return and EOP when: 1) the EOL (\r, ...) character is
+            //                    part of the stream; or 2) when the end of a line has no EOL character
+            //                    it will give one at the end of the line by default.
+            //
+            //                    As above, end of line MSFT return values are for text wrapping. So,
+            //                    ours are the visual lines; and we must process the MSFT output to make
+            //                    sure it agrees with ours.
+            //
+            // 1) Empty Paragraph:  We will not currently be processing a paragraph.
+            // 2) No End of Line:   We will close the current line
+
             var trailingLine = false;
 
             if (!_addingParagraph)
-                throw new Exception("Not working on visual paragraph! Must call BeginParagraph() before this operation!");
+            {
+                // TODO: MAKE THESE "EMPTY PARAGRAPHS"
+                BeginParagraph();
+            }
 
             if (_addingLine)
             {

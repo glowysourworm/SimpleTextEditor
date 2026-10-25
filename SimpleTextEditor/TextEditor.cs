@@ -261,8 +261,8 @@ namespace SimpleTextEditor
                 {
                     var visualLine = _document.GetVisualText().GetVisualLine(paragraphIndex + 1, lineIndex + 1);
 
-                    // Empty Line
-                    if (visualLine.IsDefault())
+                    // Empty Line (TODO)
+                    if (visualLine.IsEmpty())
                     {
                         position.X = 0;
                         position.Y += _document.GetDefaultTextHeight();

@@ -13,10 +13,11 @@ namespace SimpleTextEditor.Text.Visualization
     /// </summary>
     public class VisualLineData
     {
+        public int ParagraphNumber { get; }
         public int LineNumber { get; }
         public int StartOffset { get { return _startOffset; } }
         public int EndOffset { get { return _endOffset; } }
-        public int Length { get { return _startOffset >= 0 ? _endOffset - _startOffset + 1 : 0; } }
+        public int Length { get { return IsEmpty() ? 0 : _endOffset - _startOffset + 1; } }
         public IEnumerable<TextLine> VisualElements { get { return _visualElements; } }
         public IEnumerable<ITextElement> Elements { get { return _elements; } }
         public IEnumerable<ITextSpan> Spans { get { return _spans; } }
@@ -29,33 +30,31 @@ namespace SimpleTextEditor.Text.Visualization
         int _startOffset;
         int _endOffset;
 
-        // Default ITextPosition (for empty line)
-        readonly ITextPosition _default;
-
         /// <summary>
         /// Creates a visual line:  The "empty" or "default" line ITextPosition is used to locate the beginning of a 
-        /// new line. This is used for the caret position; and for UI measurement.
+        /// new line. This is used for the caret position; and for UI measurement. An empty line will have no text elements
+        /// or spans.
         /// </summary>
         /// <param name="paragraphNumber">Paragraph number for the line</param>
         /// <param name="lineNumber">Line number for the line</param>
-        /// <param name="defaultOffset">Offset for the first character (or caret)</param>
-        public VisualLineData(int paragraphNumber, int lineNumber, int defaultOffset)
+        /// <param name="offset">Offset for the first character (or caret in the case of an empty line)</param>
+        public VisualLineData(int paragraphNumber, int lineNumber, int offset)
         {
+            this.ParagraphNumber = paragraphNumber;
             this.LineNumber = lineNumber;
+
             _visualElements = new List<TextLine>();
             _elements = new List<ITextElement>();
             _spans = new List<ITextSpan>();
 
-            _startOffset = -1;                              // Leave these at -1 until user sets elements or spans
-            _endOffset = -1;
-
-            _default = new TextPosition(defaultOffset, 1, lineNumber, paragraphNumber);
+            _startOffset = offset;                      // Beginning of line
+            _endOffset = offset;
         }
 
         public void AddElement(TextLine element, ITextElement textElement)
         {
             // Start Offset
-            if (_startOffset == -1)
+            if (IsEmpty())
             {
                 _startOffset = textElement.Position.Offset;
                 _endOffset = textElement.Position.Offset + textElement.Length - 1;
@@ -63,7 +62,7 @@ namespace SimpleTextEditor.Text.Visualization
 
             // End Offset (Update) (careful with multiple segments!)
             else
-                _endOffset += textElement.Length;
+                _endOffset += textElement.Length - 1;
 
             _visualElements.Add(element);
             _elements.Add(textElement);
@@ -96,29 +95,35 @@ namespace SimpleTextEditor.Text.Visualization
             if (!ContainsOffset(offset))
                 throw new ArgumentException("Offset out of range");
 
+            if (IsEmpty())
+                return new TextPosition(_startOffset, 1, this.LineNumber, this.ParagraphNumber);
+
             return _elements.First().Position.WithOffset(offset);
         }
 
         public ITextPosition GetStartPosition()
         {
-            if (_startOffset == -1)
-                return _default;
+            if (IsEmpty())
+                return new TextPosition(_startOffset, 1, this.LineNumber, this.ParagraphNumber);
 
             return _elements.First().Position;
         }
 
         public ITextPosition GetEndPosition()
         {
-            if (_startOffset == -1)
-                return _default;
+            if (IsEmpty())
+                return new TextPosition(_startOffset, 1, this.LineNumber, this.ParagraphNumber);
 
             return _elements.First().Position.WithOffset(this.EndOffset);
         }
 
         public bool ContainsOffset(int offset)
         {
-            if (_startOffset == -1)
-                return false;
+            // Empty Lines:  The length of the empty line is one character - which is held by the
+            //               default offset
+            //
+            if (IsEmpty())
+                return offset == _startOffset;
 
             if (offset < _startOffset ||
                 offset > _endOffset)
@@ -130,9 +135,9 @@ namespace SimpleTextEditor.Text.Visualization
         /// <summary>
         /// Returns true if this line represents an empty line
         /// </summary>
-        public bool IsDefault()
+        public bool IsEmpty()
         {
-            return _startOffset == -1;
+            return _startOffset == _endOffset;
         }
 
         private void Validate()
